@@ -1,0 +1,49 @@
+{
+  "name": "stella-sdk-typescript",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint 'src/**/*.{ts,tsx}' 'tests/**/*.{ts,tsx}'",
+    "lint:fix": "eslint 'src/**/*.{ts,tsx}' 'test/**/*.{ts,tsx}' --fix",
+    "format": "prettier --write 'src/**/*.{js,ts,tsx,json,md}'"
+  },
+  "keywords": [
+    "typescript",
+    "library"
+  ],
+  "author": "Stella Technologies (UK) Limited",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stella-systems/stellanow-sdk-typescript"
+  },
+  "bugs": {
+    "url": "https://github.com/stella-systems/stellanow-sdk-typescript/issues"
+  },
+  "homepage": "https://github.com/stella-systems/stellanow-sdk-typescript#readme",
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "@typescript-eslint/parser": "^8.24.0",
+    "eslint": "^9.20.1",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.3",
+    "globals": "^15.15.0",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.24.1",
+    "vitest": "^3.0.5"
+  },
+  "dependencies": {
+    "mqtt": "^5.10.3",
+    "openid-client": "^6.1.7"
+  }
+}
