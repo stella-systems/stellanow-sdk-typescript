@@ -20,4 +20,6 @@
 
 export { DefaultLogger } from "./lib/core/DefaultLogger"
 export * from "./lib/types"
-export { StellaSdk } from "./lib/StellaSdk";
+export { StellaSdk } from "./lib/StellaSdk"
+export * from "./lib/core/Messages"
+export * from "./lib/core/Events"

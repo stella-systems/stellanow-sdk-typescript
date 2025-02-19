@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+      "outDir": "dist",
+      "module": "CommonJS",
+      "target": "ES6",
+      "strict": true,
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true,
+      "declaration": true,
+      "sourceMap": true
+    },
+    "include": ["src"]
+  }

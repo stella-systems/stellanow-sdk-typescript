@@ -1,0 +1,24 @@
+{
+  "name": "stellanowdemo",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "run": "node dist/main.js",
+    "dev": "ts-node src/main.ts",
+    "start": "npm run build && npm run run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "ws": "^8.18.0",
+    "stella-sdk-typescript": "file:../StellaNowSDK"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.14",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  }
+}

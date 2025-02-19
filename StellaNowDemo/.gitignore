@@ -1,0 +1,43 @@
+# Project Specific
+./src/**/*.js
+
+# Dependency directories
+node_modules/
+
+# TypeScript compiled JavaScript files
+/dist
+
+# Environment variables
+.env
+
+# Editor directories and files
+.idea/
+*.swp
+*.swo
+.vscode/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Build outputs
+*.log
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Optional: Documentation build outputs
+/docs
+
+# Optional: Coverage directory used by tools like Istanbul
+/coverage
+
+# Temporary files
+.tmp
+.temp
+
+# Yarn Integrity file
+.yarn-integrity
+
+.DS_Store
