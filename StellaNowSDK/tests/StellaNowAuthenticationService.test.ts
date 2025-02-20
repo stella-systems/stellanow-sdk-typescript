@@ -19,9 +19,9 @@
 // IN THE SOFTWARE.
 
 import { test, expect, beforeEach, afterEach, vi } from "vitest";
-import { StellaNowAuthenticationService } from "../src/lib/core/Authentication/StellaNowAuthenticationService";
+import { StellaNowAuthenticationService } from "../src/lib/core/Authentication/StellaNowAuthenticationService.js";
 import { discovery, genericGrantRequest, refreshTokenGrant, } from "openid-client";
-import {ILogger, StellaNowEnvironmentConfig, StellaNowCredentials, Credentials} from "../src/lib/types";
+import {ILogger, StellaNowEnvironmentConfig, StellaNowCredentials, StellaProjectInfo} from "../src/lib/types/index.js";
 
 // 1) Mock the openid-client methods
 vi.mock("openid-client", () => {
@@ -49,13 +49,18 @@ const mockEnvConfig: StellaNowEnvironmentConfig = {
     },
 };
 
-const mockCredentials: StellaNowCredentials = Credentials.new({
-    organizationId: "myorg",
-    projectId: "myproj",
-    apiKey: "username@example.com",
-    apiSecret: "secret123",
-    clientId: "myclient"
-});
+const mockInfo: StellaProjectInfo = new StellaProjectInfo(
+    "myorg",
+    "myproj"
+);
+
+const mockCredentials: StellaNowCredentials = new StellaNowCredentials(
+    
+    "username@example.com",
+    "secret123",
+    "myclient",
+    StellaNowCredentials.DEFAULT_OIDC_CLIENT
+);
 
 let service: StellaNowAuthenticationService;
 
@@ -65,6 +70,7 @@ beforeEach(() => {
     service = new StellaNowAuthenticationService(
         mockLogger,
         mockEnvConfig,
+        mockInfo,
         mockCredentials
     );
 });

@@ -18,8 +18,9 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-export { DefaultLogger } from "./lib/core/DefaultLogger"
-export * from "./lib/types"
-export { StellaSdk } from "./lib/StellaSdk"
-export * from "./lib/core/Messages"
-export * from "./lib/core/Events"
+export { DefaultLogger } from "./lib/core/DefaultLogger.js";
+export * from "./lib/types/index.js";
+export { StellaSdk } from "./lib/StellaSdk.js";
+export * from "./lib/core/Messages.js";
+export * from "./lib/core/Events.js";
+export * from "./lib/core/Authentication/StellaNowAuthenticationService.js";

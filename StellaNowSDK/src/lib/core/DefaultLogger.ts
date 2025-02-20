@@ -18,7 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import { ILogger } from "../types";
+import { ILogger } from "../types/index.js";
 
 function formatTimestamp(date: Date): string {
   // For example: "2025-02-17 21:58:25"

@@ -20,10 +20,18 @@
 
 {
   "compilerOptions": {
+    "target": "ESNext",
+    "module": "Node16",
+    "moduleResolution": "Node16",
     "strict": true,
+    
+    
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "moduleResolution": "node",
+
+    "noImplicitAny": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
   },
   "include": ["src", "tests"]
 }

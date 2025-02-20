@@ -27,7 +27,8 @@ import {
   ILogger,
   StellaNowEnvironmentConfig,
   StellaNowCredentials,
-} from "../../types";
+  StellaProjectInfo,
+} from "../../types/index.js";
 
 interface TokenResponse {
   access_token?: string;
@@ -38,6 +39,7 @@ interface TokenResponse {
 
 export class StellaNowAuthenticationService {
   private logger: ILogger;
+  private projectInfo: StellaProjectInfo;
   private credentials: StellaNowCredentials;
   private envConfig: StellaNowEnvironmentConfig;
   private discoveryDocumentUrl: string;
@@ -47,13 +49,15 @@ export class StellaNowAuthenticationService {
   constructor(
     logger: ILogger,
     envConfig: StellaNowEnvironmentConfig,
+    projectInfo: StellaProjectInfo,
     credentials: StellaNowCredentials,
   ) {
     this.logger = logger;
     this.envConfig = envConfig;
+    this.projectInfo = projectInfo;
     this.credentials = credentials;
 
-    this.discoveryDocumentUrl = `${this.envConfig.authority}/realms/${this.credentials.organizationId}/.well-known/openid-configuration`;
+    this.discoveryDocumentUrl = `${this.envConfig.authority}/realms/${this.projectInfo.organizationId}/.well-known/openid-configuration`;
   }
 
   // Attempts to refresh tokens first; if that fails, performs a new login.
@@ -82,7 +86,7 @@ export class StellaNowAuthenticationService {
     try {
       this.configInstance = await discovery(
         new URL(this.discoveryDocumentUrl),
-        this.credentials.oidcClient
+        this.credentials.oidcClient,
       );
 
       return this.configInstance;
@@ -106,7 +110,7 @@ export class StellaNowAuthenticationService {
         "password",
         new URLSearchParams({
           username: this.credentials.apiKey,
-          password: this.credentials.apiSecret
+          password: this.credentials.apiSecret,
         }),
       );
 

@@ -18,14 +18,21 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-
-import {ILogger, StellaNowCredentials, StellaNowEnvironmentConfig} from "./types";
-import {StellaNowAuthenticationService} from "./core/Authentication/StellaNowAuthenticationService";
+import {
+  ILogger,
+  StellaNowCredentials,
+  StellaNowEnvironmentConfig,
+} from "./types/index.js";
+import { StellaNowAuthenticationService } from "./core/Authentication/StellaNowAuthenticationService.js";
 
 export class StellaSdk {
   private logger: ILogger;
 
-  constructor(logger: ILogger, envConfig: StellaNowEnvironmentConfig, credentials: StellaNowCredentials) {
+  constructor(
+    logger: ILogger,
+    envConfig: StellaNowEnvironmentConfig,
+    credentials: StellaNowCredentials,
+  ) {
     this.logger = logger;
   }
 

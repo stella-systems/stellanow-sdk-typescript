@@ -19,9 +19,10 @@
 // IN THE SOFTWARE.
 
 import { test, expect } from 'vitest';
-import { StellaNowAuthenticationService } from '../src/lib/core/Authentication/StellaNowAuthenticationService';
-import { DefaultLogger } from '../src/lib/core/DefaultLogger';
-import { Credentials, EnvConfig } from '../src/lib/types';
+import { StellaNowAuthenticationService } from '../src/lib/core/Authentication/StellaNowAuthenticationService.js';
+import { DefaultLogger } from '../src/lib/core/DefaultLogger.js';
+import { CredentialsFromEnv, EnvConfig, ProjectInfoFromEnv } from '../src/lib/types/index.js';
+import { StellaNowCredentials } from '../src/index.js';
 
 test('Live StellaNow authentication', async () => {
     // 1) Ensure environment variables are set, or skip/fail
@@ -36,13 +37,8 @@ test('Live StellaNow authentication', async () => {
     const service = new StellaNowAuthenticationService(
         logger,
         EnvConfig.saasProd(), // or your environment config
-        Credentials.new({
-            organizationId: process.env.ORGANIZATION_ID ?? 'defaultOrg',
-            projectId: process.env.PROJECT_ID ?? 'defaultProject',
-            apiKey: process.env.API_KEY,
-            apiSecret: process.env.API_SECRET,
-            clientId: process.env.CLIENT_ID ?? 'StellaNowSDK TypeScript',
-        })
+        ProjectInfoFromEnv(),
+        CredentialsFromEnv()
     );
 
     await service.authenticate();

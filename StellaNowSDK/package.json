@@ -1,9 +1,12 @@
 {
   "name": "stella-sdk-typescript",
   "version": "0.0.1",
+  "author": "Stella Technologies (UK) Limited",
+  "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "type": "module",
   "files": [
     "dist"
   ],
@@ -20,8 +23,6 @@
     "typescript",
     "library"
   ],
-  "author": "Stella Technologies (UK) Limited",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/stella-systems/stellanow-sdk-typescript"
