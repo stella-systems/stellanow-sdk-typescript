@@ -83,6 +83,10 @@ export class StellaNowAuthenticationService {
       return this.configInstance;
     }
 
+    this.logger.info(
+      "No current config instance, requesting one from: " +
+        this.discoveryDocumentUrl,
+    );
     try {
       this.configInstance = await discovery(
         new URL(this.discoveryDocumentUrl),
@@ -105,6 +109,7 @@ export class StellaNowAuthenticationService {
     const config = await this.getDiscoveryDocumentResponse();
 
     try {
+      this.logger.info("Requesting generic grant");
       this.tokenResponse = await genericGrantRequest(
         config,
         "password",
@@ -114,6 +119,7 @@ export class StellaNowAuthenticationService {
         }),
       );
 
+      this.logger.info("Validating token response");
       this.validateTokenResponse(this.tokenResponse);
 
       this.logger.info("Authentication successful");

@@ -18,11 +18,34 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-export { DefaultLogger } from "./lib/core/DefaultLogger.js";
-export * from "./lib/types/index.js";
-export * from "./lib/core/Messages.js";
-export * from "./lib/core/Events.js";
-export * from "./lib/core/MessageQueue.js";
-export * from "./lib/core/StellaNowSignal.js";
-export * from "./lib/core/StellaNowSDK.js";
-export * from "./lib/core/Authentication/StellaNowAuthenticationService.js";
+class StellaNowSignal<T extends (...args: any[]) => void | void = () => void> {
+  private listeners: T[] = [];
+
+  /**
+   * Subscribe to the Signal.
+   * @param listener The function to be called when the event is triggered.
+   */
+  public subscribe(listener: T): void {
+    if (!this.listeners.includes(listener)) {
+      this.listeners.push(listener);
+    }
+  }
+
+  /**
+   * Unsubscribe from the signal.
+   * @param listener The function to remove from the event.
+   */
+  public unsubscribe(listener: T): void {
+    this.listeners = this.listeners.filter((l) => l !== listener);
+  }
+
+  /**
+   * Trigger the signal, calling all subscribed listeners.
+   * @param args Arguments to pass to the listeners.
+   */
+  public trigger(...args: Parameters<T>): void {
+    this.listeners.forEach((listener) => listener(...args));
+  }
+}
+
+export { StellaNowSignal };

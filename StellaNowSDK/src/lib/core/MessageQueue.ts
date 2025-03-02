@@ -18,11 +18,38 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-export { DefaultLogger } from "./lib/core/DefaultLogger.js";
-export * from "./lib/types/index.js";
-export * from "./lib/core/Messages.js";
-export * from "./lib/core/Events.js";
-export * from "./lib/core/MessageQueue.js";
-export * from "./lib/core/StellaNowSignal.js";
-export * from "./lib/core/StellaNowSDK.js";
-export * from "./lib/core/Authentication/StellaNowAuthenticationService.js";
+import { StellaNowEventWrapper } from "./Events.js";
+
+interface IStellaNowMessageQueue {
+  // Returns false if the queue is full
+  Enqueue(event: StellaNowEventWrapper): boolean;
+
+  // Returns undefined if the queue is empty
+  TryDequeue(): StellaNowEventWrapper | undefined;
+
+  IsEmpty(): boolean;
+
+  Length(): number;
+}
+
+class FifoQueue implements IStellaNowMessageQueue {
+  private Items: StellaNowEventWrapper[] = [];
+
+  Enqueue(event: StellaNowEventWrapper): boolean {
+    this.Items.push(event);
+    return true;
+  }
+  TryDequeue(): StellaNowEventWrapper | undefined {
+    return this.Items.shift();
+  }
+
+  IsEmpty(): boolean {
+    return this.Items.length === 0;
+  }
+
+  Length(): number {
+    return this.Items.length;
+  }
+}
+
+export { IStellaNowMessageQueue, FifoQueue };
