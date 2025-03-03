@@ -44,7 +44,11 @@ class StellaNowSignal<T extends (...args: any[]) => void | void = () => void> {
    * @param args Arguments to pass to the listeners.
    */
   public trigger(...args: Parameters<T>): void {
-    this.listeners.forEach((listener) => listener(...args));
+    try {
+      this.listeners.forEach((listener) => listener(...args));
+    } catch {
+      // TODO: Log out an error?
+    }
   }
 }
 

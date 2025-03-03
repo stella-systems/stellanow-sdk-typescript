@@ -10,6 +10,7 @@ import {
   StellaNowAuthenticationService,
   StellaNowJsonMessage,
   StellaNowSDK,
+  StellaNowMqttSink,
 } from "stella-sdk-typescript";
 
 const stellaProjectInfo = ProjectInfoFromEnv();
@@ -28,19 +29,25 @@ const stellaAuthService = new StellaNowAuthenticationService(
   stellaCredentials,
 );
 
-var stellaSDK = new StellaNowSDK(
+var stellaMQttSink = new StellaNowMqttSink(
   stellaCredentials,
   stellaProjectInfo,
   stellaEnvConfig,
   stellaAuthService,
+  logger,
+);
+
+var stellaSDK = new StellaNowSDK(
+  stellaProjectInfo,
+  stellaMQttSink,
   new FifoQueue(),
   logger,
 );
 
 console.log("Starting service up");
 
-stellaSDK.OnError.subscribe(() => {
-  console.log("Error with stella service");
+stellaSDK.OnError.subscribe((err) => {
+  console.log("Error with stella service: " + err);
 });
 
 stellaSDK.OnDisconnected.subscribe(() => {
@@ -59,7 +66,7 @@ stellaSDK.OnConnected.subscribe(() => {
   var jsonMessage = new StellaNowJsonMessage(
     "e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8",
     "d7db42f0-13ab-4c89-a7c8-fae73691d3ed",
-    "{'game_id': 123}",
+    '{"game_id": 123}',
   );
 
   stellaSDK.SendMessage(userDetailsMessage);

@@ -24,5 +24,7 @@ export * from "./lib/core/Messages.js";
 export * from "./lib/core/Events.js";
 export * from "./lib/core/MessageQueue.js";
 export * from "./lib/core/StellaNowSignal.js";
-export * from "./lib/core/StellaNowSDK.js";
 export * from "./lib/core/Authentication/StellaNowAuthenticationService.js";
+export * from "./lib/StellaNowSDK.js";
+export * from "./lib/sinks/IStellaNowSink.js";
+export * from "./lib/sinks/MqttSink.js";
