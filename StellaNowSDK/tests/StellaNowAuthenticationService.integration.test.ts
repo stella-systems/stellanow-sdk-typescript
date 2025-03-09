@@ -19,10 +19,11 @@
 // IN THE SOFTWARE.
 
 import { test, expect } from 'vitest';
-import { StellaNowAuthenticationService } from '../src/lib/core/Authentication/StellaNowAuthenticationService.js';
-import { DefaultLogger } from '../src/lib/core/DefaultLogger.js';
-import { CredentialsFromEnv, EnvConfig, ProjectInfoFromEnv } from '../src/lib/types/index.js';
+
 import { StellaNowCredentials } from '../src/index.js';
+import { StellaNowAuthenticationService } from '../src/lib/core/Authentication/stellanow-authentication-service.js';
+import { DefaultLogger } from '../src/lib/core/default-logger.js';
+import { CredentialsFromEnv, EnvConfig, ProjectInfoFromEnv } from '../src/lib/types/index.js';
 
 test('Live StellaNow authentication', async () => {
     // 1) Ensure environment variables are set, or skip/fail

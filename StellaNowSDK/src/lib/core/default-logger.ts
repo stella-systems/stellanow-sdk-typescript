@@ -18,37 +18,37 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import { ILogger } from "../types/index.js";
+import type { ILogger } from '../types/index.js';
 
 function formatTimestamp(date: Date): string {
-  // For example: "2025-02-17 21:58:25"
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    // For example: "2025-02-17 21:58:25"
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
 export class DefaultLogger implements ILogger {
-  debug(message: string, ...meta: any[]) {
-    const timestamp = formatTimestamp(new Date());
-    console.debug(`[${timestamp}] debug: ${message}`, ...meta);
-  }
+    debug(message: string, ...meta: any[]) {
+        const timestamp = formatTimestamp(new Date());
+        console.debug(`[${timestamp}] debug: ${message}`, ...meta);
+    }
 
-  info(message: string, ...meta: any[]) {
-    const timestamp = formatTimestamp(new Date());
-    console.info(`[${timestamp}] info: ${message}`, ...meta);
-  }
+    info(message: string, ...meta: any[]) {
+        const timestamp = formatTimestamp(new Date());
+        console.info(`[${timestamp}] info: ${message}`, ...meta);
+    }
 
-  warn(message: string, ...meta: any[]) {
-    const timestamp = formatTimestamp(new Date());
-    console.warn(`[${timestamp}] warn: ${message}`, ...meta);
-  }
+    warn(message: string, ...meta: any[]) {
+        const timestamp = formatTimestamp(new Date());
+        console.warn(`[${timestamp}] warn: ${message}`, ...meta);
+    }
 
-  error(message: string, ...meta: any[]) {
-    const timestamp = formatTimestamp(new Date());
-    console.error(`[${timestamp}] error: ${message}`, ...meta);
-  }
+    error(message: string, ...meta: any[]) {
+        const timestamp = formatTimestamp(new Date());
+        console.error(`[${timestamp}] error: ${message}`, ...meta);
+    }
 }

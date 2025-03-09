@@ -18,14 +18,38 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-export { DefaultLogger } from './lib/core/default-logger.js';
-export * from './lib/types/index.js';
-export * from './lib/core/messages.js';
-export * from './lib/core/events.js';
-export * from './lib/core/message-queue.js';
-export * from './lib/core/stellanow-signal.js';
-export * from './lib/stella-now-sdk.js';
-export * from './lib/sinks/i-stellanow-sink.js';
-export * from './lib/sinks/mqtt/mqtt-sink.js';
-export * from './lib/sinks/mqtt/auth-strategies/i-mqtt-auth-strategy.js';
-export * from './lib/sinks/mqtt/auth-strategies/oidc-mqtt-auth-strategy.js';
+class StellaNowSignal<T extends (...args: any[]) => void   = () => void> {
+    private listeners: T[] = [];
+
+    /**
+     * Subscribe to the Signal.
+     * @param listener The function to be called when the event is triggered.
+     */
+    public subscribe(listener: T): void {
+        if (!this.listeners.includes(listener)) {
+            this.listeners.push(listener);
+        }
+    }
+
+    /**
+     * Unsubscribe from the signal.
+     * @param listener The function to remove from the event.
+     */
+    public unsubscribe(listener: T): void {
+        this.listeners = this.listeners.filter(l => l !== listener);
+    }
+
+    /**
+     * Trigger the signal, calling all subscribed listeners.
+     * @param args Arguments to pass to the listeners.
+     */
+    public trigger(...args: Parameters<T>): void {
+        try {
+            this.listeners.forEach(listener => listener(...args));
+        } catch {
+            // TODO: Log out an error?
+        }
+    }
+}
+
+export { StellaNowSignal };

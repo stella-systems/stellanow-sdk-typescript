@@ -19,10 +19,10 @@
 // IN THE SOFTWARE.
 
 export {
-  ProjectInfoFromEnv,
-  CredentialsFromEnv,
-  StellaProjectInfo,
-  StellaNowCredentials,
-} from "./Credentials.js";
-export { EnvConfig, StellaNowEnvironmentConfig } from "./EnvConfig.js";
-export { ILogger } from "./ILogger.js";
+    ProjectInfoFromEnv,
+    CredentialsFromEnv,
+    StellaProjectInfo,
+    StellaNowCredentials,
+} from './credentials.js';
+export { EnvConfig, StellaNowEnvironmentConfig } from './env-config.js';
+export { ILogger } from './i-logger.js';

@@ -1,3 +1,69 @@
-.DS_Store
-.env
+# Custom
 notes.local
+
+# Dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# TypeScript build output
+dist/
+build/
+out/
+*.js
+*.d.ts
+*.js.map
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage reports
+coverage/
+.nyc_output/
+
+# Miscellaneous
+*.bak
+*.tmp
+*.tgz
+npm-cache/
+.yarn/cache/
+.pnpm/store/
+
+# Test artifacts
+test-results/
+junit.xml
+
+# Lock files (keep tracked for reproducibility)
+# package-lock.json
+# yarn-lock.json
+# pnpm-lock.yaml

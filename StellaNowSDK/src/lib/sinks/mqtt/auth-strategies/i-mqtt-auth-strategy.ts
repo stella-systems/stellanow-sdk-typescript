@@ -1,4 +1,4 @@
-// Copyright (C) 2022-2025 Stella Technologies (UK) Limited.
+// Copyright (C) 2025 Stella Technologies (UK) Limited.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,45 +18,27 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-export interface StellaNowEnvironmentConfig {
-  apiBaseUrl: string;
-  brokerUrl: string;
+import type { MqttClient } from 'mqtt';
 
-  get authority(): string;
+/**
+ * Interface for authentication strategies used to connect an MQTT client.
+ */
+interface IMqttAuthStrategy {
+    /**
+     * Authenticates and returns a connected MQTT client.
+     * @param brokerUrl The URL of the MQTT broker.
+     * @param clientId The unique client ID for the MQTT session.
+     * @returns A connected MqttClient instance.
+     * @throws {Error} If authentication or connection fails.
+     */
+    getAuthenticatedClient(brokerUrl: string, clientId: string): Promise<MqttClient>;
+
+    /**
+     * Reconnects the existing MQTT client if it is disconnected.
+     * @returns A promise that resolves when the client is reconnected.
+     * @throws {Error} If reconnection fails.
+     */
+    reconnect(): Promise<void>;
 }
 
-function createEnvConfig(
-  baseUrl: string,
-  brokerUrl: string,
-): StellaNowEnvironmentConfig {
-  return {
-    apiBaseUrl: baseUrl,
-    brokerUrl,
-    get authority() {
-      return `${this.apiBaseUrl}/auth`;
-    },
-  };
-}
-
-export const EnvConfig = {
-  saasProd(): StellaNowEnvironmentConfig {
-    return createEnvConfig(
-      "https://api.prod.stella.cloud",
-      "wss://ingestor.prod.stella.cloud:8083/mqtt",
-    );
-  },
-
-  saasStage(): StellaNowEnvironmentConfig {
-    return createEnvConfig(
-      "https://api.stage.stella.cloud",
-      "wss://ingestor.stage.stella.cloud:8083/mqtt",
-    );
-  },
-
-  createCustomEnv(
-    baseUrl: string,
-    mqttBrokerUrl: string,
-  ): StellaNowEnvironmentConfig {
-    return createEnvConfig(baseUrl, mqttBrokerUrl);
-  },
-};
+export { IMqttAuthStrategy };

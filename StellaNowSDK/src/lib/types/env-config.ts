@@ -18,38 +18,45 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import { StellaNowEventWrapper } from "./Events.js";
+export interface StellaNowEnvironmentConfig {
+    apiBaseUrl: string;
+    brokerUrl: string;
 
-interface IStellaNowMessageQueue {
-  // Returns false if the queue is full
-  Enqueue(event: StellaNowEventWrapper): boolean;
-
-  // Returns undefined if the queue is empty
-  TryDequeue(): StellaNowEventWrapper | undefined;
-
-  IsEmpty(): boolean;
-
-  Length(): number;
+    get authority(): string;
 }
 
-class FifoQueue implements IStellaNowMessageQueue {
-  private Items: StellaNowEventWrapper[] = [];
-
-  Enqueue(event: StellaNowEventWrapper): boolean {
-    this.Items.push(event);
-    return true;
-  }
-  TryDequeue(): StellaNowEventWrapper | undefined {
-    return this.Items.shift();
-  }
-
-  IsEmpty(): boolean {
-    return this.Items.length === 0;
-  }
-
-  Length(): number {
-    return this.Items.length;
-  }
+function createEnvConfig(
+    baseUrl: string,
+    brokerUrl: string
+): StellaNowEnvironmentConfig {
+    return {
+        apiBaseUrl: baseUrl,
+        brokerUrl,
+        get authority() {
+            return `${this.apiBaseUrl}/auth`;
+        },
+    };
 }
 
-export { IStellaNowMessageQueue, FifoQueue };
+export const EnvConfig = {
+    saasProd(): StellaNowEnvironmentConfig {
+        return createEnvConfig(
+            'https://api.prod.stella.cloud',
+            'wss://ingestor.prod.stella.cloud:8083/mqtt'
+        );
+    },
+
+    saasStage(): StellaNowEnvironmentConfig {
+        return createEnvConfig(
+            'https://api.stage.stella.cloud',
+            'wss://ingestor.stage.stella.cloud:8083/mqtt'
+        );
+    },
+
+    createCustomEnv(
+        baseUrl: string,
+        mqttBrokerUrl: string
+    ): StellaNowEnvironmentConfig {
+        return createEnvConfig(baseUrl, mqttBrokerUrl);
+    },
+};

@@ -19,21 +19,21 @@
 // IN THE SOFTWARE.
 
 export class StellaProjectInfo {
-  constructor(
-    public organizationId: string,
-    public projectId: string,
-  ) {}
+    constructor(
+        public organizationId: string,
+        public projectId: string
+    ) {}
 }
 
 export class StellaNowCredentials {
-  static readonly DEFAULT_OIDC_CLIENT = "event-ingestor";
+    static readonly DEFAULT_OIDC_CLIENT = 'event-ingestor';
 
-  constructor(
-    public apiKey: string,
-    public apiSecret: string,
-    public clientId: string,
-    public oidcClient: string,
-  ) {}
+    constructor(
+        public apiKey: string,
+        public apiSecret: string,
+        public clientId: string,
+        public oidcClient: string
+    ) {}
 }
 
 /////////////////////////////////////////////
@@ -46,30 +46,32 @@ export class StellaNowCredentials {
 //  - an error is logged and "" is returned if no missing value is defined
 //
 function readEnv(
-  name: string,
-  missing: string | undefined = undefined,
+    name: string,
+    missing: string | undefined = undefined
 ): string {
-  const value = process.env[name] || missing;
-  if (value === undefined) {
-    // TODO: Should use some logger that has been passed in
-    console.error("Cannot find the requested environment variable: " + name);
-    return "";
-  }
-  return value;
+    const value = process.env[name] || missing;
+    if (value === undefined) {
+        // TODO: Should use some logger that has been passed in
+        console.error(
+            'Cannot find the requested environment variable: ' + name
+        );
+        return '';
+    }
+    return value;
 }
 
 export function ProjectInfoFromEnv(): StellaProjectInfo {
-  return new StellaProjectInfo(
-    readEnv("ORGANIZATION_ID"),
-    readEnv("PROJECT_ID"),
-  );
+    return new StellaProjectInfo(
+        readEnv('ORGANIZATION_ID'),
+        readEnv('PROJECT_ID')
+    );
 }
 
 export function CredentialsFromEnv(): StellaNowCredentials {
-  return new StellaNowCredentials(
-    readEnv("API_KEY"),
-    readEnv("API_SECRET"),
-    readEnv("CLIENT_ID", "StellaNowSDK TypeScript"),
-    readEnv("OIDC_CLIENT", StellaNowCredentials.DEFAULT_OIDC_CLIENT),
-  );
+    return new StellaNowCredentials(
+        readEnv('USERNAME'),
+        readEnv('PASSWORD'),
+        readEnv('CLIENT_ID'),
+        readEnv('OIDC_CLIENT', StellaNowCredentials.DEFAULT_OIDC_CLIENT)
+    );
 }

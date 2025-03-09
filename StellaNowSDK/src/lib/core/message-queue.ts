@@ -18,38 +18,38 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-class StellaNowSignal<T extends (...args: any[]) => void | void = () => void> {
-  private listeners: T[] = [];
+import type { StellaNowEventWrapper } from './events.js';
 
-  /**
-   * Subscribe to the Signal.
-   * @param listener The function to be called when the event is triggered.
-   */
-  public subscribe(listener: T): void {
-    if (!this.listeners.includes(listener)) {
-      this.listeners.push(listener);
-    }
-  }
+interface IStellaNowMessageQueue {
+    // Returns false if the queue is full
+    Enqueue(event: StellaNowEventWrapper): boolean;
 
-  /**
-   * Unsubscribe from the signal.
-   * @param listener The function to remove from the event.
-   */
-  public unsubscribe(listener: T): void {
-    this.listeners = this.listeners.filter((l) => l !== listener);
-  }
+    // Returns undefined if the queue is empty
+    TryDequeue(): StellaNowEventWrapper | undefined;
 
-  /**
-   * Trigger the signal, calling all subscribed listeners.
-   * @param args Arguments to pass to the listeners.
-   */
-  public trigger(...args: Parameters<T>): void {
-    try {
-      this.listeners.forEach((listener) => listener(...args));
-    } catch {
-      // TODO: Log out an error?
-    }
-  }
+    IsEmpty(): boolean;
+
+    Length(): number;
 }
 
-export { StellaNowSignal };
+class FifoQueue implements IStellaNowMessageQueue {
+    private Items: StellaNowEventWrapper[] = [];
+
+    Enqueue(event: StellaNowEventWrapper): boolean {
+        this.Items.push(event);
+        return true;
+    }
+    TryDequeue(): StellaNowEventWrapper | undefined {
+        return this.Items.shift();
+    }
+
+    IsEmpty(): boolean {
+        return this.Items.length === 0;
+    }
+
+    Length(): number {
+        return this.Items.length;
+    }
+}
+
+export { IStellaNowMessageQueue, FifoQueue };

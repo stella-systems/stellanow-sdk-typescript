@@ -18,49 +18,54 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import { Convertors, ToJSON, StellaNowMessageWrapper } from "./Messages.js";
-import { StellaProjectInfo } from "../types/index.js";
+import type { ToJSON, StellaNowMessageWrapper } from './messages.js';
+import { Convertors } from './messages.js';
+import type { StellaProjectInfo } from '../types/index.js';
 
 class EventKey implements ToJSON {
-  constructor(
-    public organizationId: string,
-    public projectId: string,
-    public eventId: string,
-  ) {}
+    constructor(
+        public organizationId: string,
+        public projectId: string,
+        public eventId: string
+    ) {}
 
-  public toJSON(): any {
-    return {
-      organizationId: this.organizationId,
-      projectId: this.projectId,
-      eventId: this.eventId,
-    };
-  }
+    public toJSON(): any {
+        return {
+            organizationId: this.organizationId,
+            projectId: this.projectId,
+            eventId: this.eventId,
+        };
+    }
 }
 
 class StellaNowEventWrapper implements ToJSON {
-  constructor(
-    public eventKey: EventKey,
-    public value: StellaNowMessageWrapper,
-  ) {}
+    constructor(
+        public eventKey: EventKey,
+        public value: StellaNowMessageWrapper
+    ) {}
 
-  public toJSON(): any {
-    return {
-      key: Convertors.Convert(this.eventKey),
-      value: Convertors.Convert(this.value),
-    };
-  }
+    public toJSON(): any {
+        return {
+            key: Convertors.Convert(this.eventKey),
+            value: Convertors.Convert(this.value),
+        };
+    }
 
-  public static fromWrapper(
-    projectInfo: StellaProjectInfo,
-    value: StellaNowMessageWrapper,
-  ): StellaNowEventWrapper {
-    var eventId = value.metadata.entityTypeIds[0].entityId;
+    public static fromWrapper(
+        projectInfo: StellaProjectInfo,
+        value: StellaNowMessageWrapper
+    ): StellaNowEventWrapper {
+        const eventId = value.metadata.entityTypeIds[0].entityId;
 
-    return new StellaNowEventWrapper(
-      new EventKey(projectInfo.organizationId, projectInfo.projectId, eventId),
-      value,
-    );
-  }
+        return new StellaNowEventWrapper(
+            new EventKey(
+                projectInfo.organizationId,
+                projectInfo.projectId,
+                eventId
+            ),
+            value
+        );
+    }
 }
 
 export { EventKey, StellaNowEventWrapper };
