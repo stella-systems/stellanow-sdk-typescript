@@ -18,7 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import type { StellaNowEventWrapper } from '../core/events.js';
+import type { EventKey, StellaNowEventWrapper } from '../core/events.js';
 import type { StellaNowSignal } from '../core/stellanow-signal.js';
 
 /**
@@ -39,6 +39,12 @@ interface IStellaNowSink {
      * Event triggered when the sink disconnects from the broker.
      */
     OnDisconnected: StellaNowSignal<() => void>;
+
+    /**
+     * Event triggered when broker acknowledges reciept of the event
+     * @param eventKey The event key of the event.
+     */
+    OnMessageAck: StellaNowSignal<(eventKey: EventKey) => void>;
 
     /**
      * Event triggered when an error occurs in the sink.

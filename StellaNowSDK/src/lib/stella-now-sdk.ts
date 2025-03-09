@@ -19,7 +19,7 @@
 // IN THE SOFTWARE.
 
 import { StellaNowEventWrapper } from './core/events.js';
-import type { IStellaNowMessageQueue } from './core/message-queue.js';
+import type { IStellaNowMessageSource } from './core/message-source.js';
 import type { StellaNowMessageBase } from './core/messages.js';
 import { StellaNowMessageWrapper } from './core/messages.js';
 import type { StellaNowSignal } from './core/stellanow-signal.js';
@@ -38,12 +38,14 @@ class StellaNowSDK {
     constructor(
         private projectInfo: StellaProjectInfo,
         private sink: IStellaNowSink,
-        private queue: IStellaNowMessageQueue,
+        private source: IStellaNowMessageSource,
         private logger: ILogger
     ) {
         this.OnConnected = sink.OnConnected;
         this.OnDisconnected = sink.OnDisconnected;
         this.OnError = sink.OnError;
+
+        sink.OnMessageAck.subscribe(source.MarkMessageAck);
 
         setInterval(() => {
             this.eventLoop().catch((err) => {
@@ -76,7 +78,7 @@ class StellaNowSDK {
     }
 
     public SendEvent(event: StellaNowEventWrapper): void {
-        this.queue.Enqueue(event);
+        this.source.Enqueue(event);
         this.logger.debug(`Event enqueued: ${event.value.metadata.messageId}`);
     }
 
@@ -98,15 +100,15 @@ class StellaNowSDK {
             return;
         }
 
-        if (this.queue.IsEmpty()) {
+        if (this.source.IsEmpty()) {
             this.logger.debug('No queued messages to publish');
             return;
         }
 
         this.logger.debug('Publishing queued messages');
 
-        while (!this.queue.IsEmpty()) {
-            const event = this.queue.TryDequeue();
+        while (!this.source.IsEmpty()) {
+            const event = this.source.TryDequeue();
 
             if (event) {
                 try {
@@ -117,7 +119,7 @@ class StellaNowSDK {
                 } catch (err) {
                     this.logger.error(`Failed to publish event ${event.value.metadata.messageId}: ${String(err)}`);
                     this.errorsDetected++;
-                    this.queue.Enqueue(event); // Requeue on failure
+                    this.source.Enqueue(event); // Requeue on failure
                 }
             }
         }

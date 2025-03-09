@@ -19,11 +19,11 @@
 // IN THE SOFTWARE.
 
 import { Mutex } from 'async-mutex';
-import type { MqttClient } from 'mqtt';
+import type { MqttClient, Packet } from 'mqtt';
 import { nanoid } from 'nanoid';
 
 import type { IMqttAuthStrategy } from './auth-strategies/i-mqtt-auth-strategy.js';
-import type { StellaNowEventWrapper } from '../../core/events.js';
+import type { EventKey, StellaNowEventWrapper } from '../../core/events.js';
 import { StellaNowSignal } from '../../core/stellanow-signal.js';
 import type {
     StellaNowEnvironmentConfig,
@@ -48,6 +48,7 @@ class StellaNowMqttSink implements IStellaNowSink {
     public readonly OnConnected: StellaNowSignal<() => void> = new StellaNowSignal();
     public readonly OnDisconnected: StellaNowSignal<() => void> = new StellaNowSignal();
     public readonly OnError: StellaNowSignal<(message: string) => void> = new StellaNowSignal();
+    public readonly OnMessageAck: StellaNowSignal<(eventKey: EventKey) => void> = new StellaNowSignal<(eventKey: EventKey) => void>();
 
     private mqttClient: MqttClient | null = null;
     private mutex = new Mutex();
@@ -246,9 +247,16 @@ class StellaNowMqttSink implements IStellaNowSink {
                 this.getTopic(),
                 JSON.stringify(event),
                 { qos: 1 },
-                (error) => {
+                (error, packet?: Packet) => {
                     if (error) reject(new MqttConnectionException(error.message, this.envConfig.brokerUrl));
-                    else resolve();
+                    else {
+                        
+                        if (packet && packet.cmd == "publish" && packet.messageId) {          
+                            this.OnMessageAck.trigger(event.eventKey);
+                        }
+
+                        resolve();
+                    }
                 }
             );
         });

@@ -18,33 +18,60 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import type { StellaNowEventWrapper } from './events.js';
+import type { EventKey, StellaNowEventWrapper } from './events.js';
 
-interface IStellaNowMessageQueue {
+interface IStellaNowMessageSource {
     // Returns false if the queue is full
     Enqueue(event: StellaNowEventWrapper): boolean;
+    
+    ReEnqueueAll(): void;
+
+    MarkMessageAck(eventKey: EventKey): void;
 
     // Returns undefined if the queue is empty
     TryDequeue(): StellaNowEventWrapper | undefined;
 
     IsEmpty(): boolean;
 
+    NumberInFlight() : number;
     Length(): number;
 }
 
-class FifoQueue implements IStellaNowMessageQueue {
+class FifoQueue implements IStellaNowMessageSource {
     private Items: StellaNowEventWrapper[] = [];
+    private InFlight: Map<EventKey, StellaNowEventWrapper> = new Map<EventKey, StellaNowEventWrapper>();
+
+    MarkMessageAck(eventKey: EventKey): void
+    {
+      this.InFlight.delete(eventKey);
+    }
+
+    ReEnqueueAll(): void {
+        this.InFlight.forEach(event => {
+            this.Enqueue(event);
+        });
+        this.InFlight.clear()
+    }
 
     Enqueue(event: StellaNowEventWrapper): boolean {
         this.Items.push(event);
         return true;
     }
     TryDequeue(): StellaNowEventWrapper | undefined {
-        return this.Items.shift();
+        var item = this.Items.shift();
+        if (item) {
+            this.InFlight.set(item.eventKey, item);
+        }
+
+        return item;
     }
 
     IsEmpty(): boolean {
         return this.Items.length === 0;
+    }
+    
+    NumberInFlight() : number {
+        return this.InFlight.values.length;
     }
 
     Length(): number {
@@ -52,4 +79,4 @@ class FifoQueue implements IStellaNowMessageQueue {
     }
 }
 
-export { IStellaNowMessageQueue, FifoQueue };
+export { IStellaNowMessageSource, FifoQueue };

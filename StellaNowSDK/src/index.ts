@@ -22,7 +22,7 @@ export { DefaultLogger } from './lib/core/default-logger.js';
 export * from './lib/types/index.js';
 export * from './lib/core/messages.js';
 export * from './lib/core/events.js';
-export * from './lib/core/message-queue.js';
+export * from './lib/core/message-source.js';
 export * from './lib/core/stellanow-signal.js';
 export * from './lib/stella-now-sdk.js';
 export * from './lib/sinks/i-stellanow-sink.js';
