@@ -69,8 +69,8 @@ export function ProjectInfoFromEnv(): StellaProjectInfo {
 
 export function CredentialsFromEnv(): StellaNowCredentials {
     return new StellaNowCredentials(
-        readEnv('USERNAME'),
-        readEnv('PASSWORD'),
+        readEnv('STELLA_USERNAME'),
+        readEnv('STELLA_PASSWORD'),
         readEnv('CLIENT_ID'),
         readEnv('OIDC_CLIENT', StellaNowCredentials.DEFAULT_OIDC_CLIENT)
     );
