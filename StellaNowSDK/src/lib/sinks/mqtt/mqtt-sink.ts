@@ -49,7 +49,7 @@ class StellaNowMqttSink implements IStellaNowSink {
     public readonly OnConnected: StellaNowSignal<() => void> = new StellaNowSignal();
     public readonly OnDisconnected: StellaNowSignal<() => void> = new StellaNowSignal();
     public readonly OnError: StellaNowSignal<(message: string) => void> = new StellaNowSignal();
-    public readonly OnMessageAck: StellaNowSignal<(eventKey: EventKey) => void> = new StellaNowSignal<(eventKey: EventKey) => void>();
+    public readonly OnMessageAck: StellaNowSignal<(eventId: string) => void> = new StellaNowSignal<(eventId: string) => void>();
 
     private mqttClient: MqttClient | null = null;
     private mutex = new Mutex();
@@ -260,7 +260,7 @@ class StellaNowMqttSink implements IStellaNowSink {
                     else {
                         
                         if (packet && packet.cmd == "publish" && packet.messageId) {          
-                            this.OnMessageAck.trigger(event.eventKey);
+                            this.OnMessageAck.trigger(event.MessageId);
                         }
 
                         resolve();

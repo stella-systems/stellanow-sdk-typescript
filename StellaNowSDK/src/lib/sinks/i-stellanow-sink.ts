@@ -44,7 +44,7 @@ interface IStellaNowSink {
      * Event triggered when broker acknowledges reciept of the event
      * @param eventKey The event key of the event.
      */
-    OnMessageAck: StellaNowSignal<(eventKey: EventKey) => void>;
+    OnMessageAck: StellaNowSignal<(eventId: string) => void>;
 
     /**
      * Event triggered when an error occurs in the sink.

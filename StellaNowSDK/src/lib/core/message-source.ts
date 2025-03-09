@@ -26,7 +26,7 @@ interface IStellaNowMessageSource {
     
     ReEnqueueAll(): void;
 
-    MarkMessageAck(eventKey: EventKey): void;
+    MarkMessageAck(eventId: string): void;
 
     // Returns undefined if the queue is empty
     TryDequeue(): StellaNowEventWrapper | undefined;
@@ -39,11 +39,11 @@ interface IStellaNowMessageSource {
 
 class FifoQueue implements IStellaNowMessageSource {
     private Items: StellaNowEventWrapper[] = [];
-    private InFlight: Map<EventKey, StellaNowEventWrapper> = new Map<EventKey, StellaNowEventWrapper>();
+    private InFlight: Map<string, StellaNowEventWrapper> = new Map<string, StellaNowEventWrapper>();
 
-    MarkMessageAck(eventKey: EventKey): void
+    MarkMessageAck(eventId: string): void
     {
-      this.InFlight.delete(eventKey);
+      this.InFlight.delete(eventId);
     }
 
     ReEnqueueAll(): void {
@@ -60,7 +60,7 @@ class FifoQueue implements IStellaNowMessageSource {
     TryDequeue(): StellaNowEventWrapper | undefined {
         var item = this.Items.shift();
         if (item) {
-            this.InFlight.set(item.eventKey, item);
+            this.InFlight.set(item.MessageId, item);
         }
 
         return item;

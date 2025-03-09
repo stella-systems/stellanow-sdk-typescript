@@ -44,6 +44,10 @@ class StellaNowEventWrapper implements ToJSON {
         public value: StellaNowMessageWrapper
     ) {}
 
+    get MessageId () : string {
+      return this.value.metadata.messageId;
+    }
+
     public toJSON(): any {
         return {
             key: Convertors.Convert(this.eventKey),
