@@ -18,7 +18,6 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import mqtt from 'mqtt';
 import type { MqttClient, IClientOptions } from 'mqtt';
 import type {
     Configuration as DiscoveryConfig,
@@ -59,7 +58,6 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
     private readonly discoveryDocumentUrl: string;
     private configInstance: DiscoveryConfig | null = null;
     private tokenResponse: TokenSet | null = null;
-    private mqttClient: ExtendedMqttClient | null = null;
 
     /**
      * Initializes a new instance of the OidcMqttAuthStrategy.
@@ -86,46 +84,16 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
     }
 
     /**
-     * Authenticates and returns a connected MQTT client.
-     * @param brokerUrl The URL of the MQTT broker.
-     * @param clientId The unique client ID for the MQTT session.
-     * @returns A connected MqttClient instance.
-     * @throws {Error} If authentication or connection fails.
-     */
-    public async getAuthenticatedClient(brokerUrl: string, clientId: string): Promise<MqttClient> {
-        if (this.mqttClient) {
-            return this.mqttClient; // Reuse existing client if already authenticated
-        }
-
-        await this.authenticate();
-        const accessToken = this.getAccessToken();
-        if (!accessToken) {
-            throw new Error('No valid access token available after authentication');
-        }
-
-        this.mqttClient = await mqtt.connectAsync(brokerUrl, {
-            clientId,
-            username: accessToken,
-            password: '',
-            clean: true,
-            protocolVersion: 5,
-        }) as ExtendedMqttClient;
-
-        this.setupEventHandlers(this.mqttClient);
-        return this.mqttClient;
-    }
-
-    /**
      * Reconnects the existing MQTT client if it is disconnected.
      * @returns A promise that resolves when the client is reconnected.
      * @throws {Error} If reconnection fails.
      */
-    public async reconnect(): Promise<void> {
-        if (!this.mqttClient) {
+    public async auth(mqttClient: ExtendedMqttClient): Promise<void> {
+        if (!mqttClient) {
             throw new Error('No MQTT client available to reconnect');
         }
 
-        if (this.mqttClient.connected) {
+        if (mqttClient.connected) {
             return; // Already connected, no action needed
         }
 
@@ -136,30 +104,8 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
         }
 
         // Update options and reconnect
-        this.mqttClient.options.username = accessToken; // Safe access with ExtendedMqttClient
-        this.mqttClient.options.password = ''; // Reset password
-
-        const client = this.mqttClient; // Local variable to avoid null issues in callbacks
-        await new Promise<void>((resolve, reject) => {
-            const onConnect = (): void => {
-                client.off('connect', onConnect);
-                client.off('error', onError);
-                resolve();
-            };
-
-            const onError = (err: Error): void => {
-                client.off('connect', onConnect);
-                client.off('error', onError);
-                reject(err);
-            };
-
-            client.on('connect', onConnect);
-            client.on('error', onError);
-
-            client.end(() => {
-                client.connect();
-            });
-        });
+        mqttClient.options.username = accessToken; // Safe access with ExtendedMqttClient
+        mqttClient.options.password = ''; // Reset password
     }
 
     /**
@@ -296,25 +242,6 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
             return err.message;
         }
         return String(err) || 'Unknown error';
-    }
-
-    /**
-     * Sets up event handlers for the MQTT client.
-     * @param client The MQTT client to set up handlers for.
-     * @returns {void}
-     */
-    private setupEventHandlers(client: MqttClient): void {
-        client.on('connect', () => {
-            this.logger.info('Connected to MQTT broker');
-        });
-
-        client.on('disconnect', () => {
-            this.logger.info('Disconnected from MQTT broker');
-        });
-
-        client.on('error', (err) => {
-            this.logger.error(`MQTT error: ${err.message}`);
-        });
     }
 }
 

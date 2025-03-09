@@ -25,20 +25,11 @@ import type { MqttClient } from 'mqtt';
  */
 interface IMqttAuthStrategy {
     /**
-     * Authenticates and returns a connected MQTT client.
-     * @param brokerUrl The URL of the MQTT broker.
-     * @param clientId The unique client ID for the MQTT session.
-     * @returns A connected MqttClient instance.
-     * @throws {Error} If authentication or connection fails.
-     */
-    getAuthenticatedClient(brokerUrl: string, clientId: string): Promise<MqttClient>;
-
-    /**
      * Reconnects the existing MQTT client if it is disconnected.
      * @returns A promise that resolves when the client is reconnected.
      * @throws {Error} If reconnection fails.
      */
-    reconnect(): Promise<void>;
+    auth(mqttClient: MqttClient): Promise<void>;
 }
 
 export { IMqttAuthStrategy };
