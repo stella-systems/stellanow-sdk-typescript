@@ -23,7 +23,7 @@
   "compilerOptions": {
     "outDir": "dist",
     "declaration": true,
-    "module": "esnext",
+    "module": "Node16",
     "target": "esnext",
     "rootDir": "src"
   },

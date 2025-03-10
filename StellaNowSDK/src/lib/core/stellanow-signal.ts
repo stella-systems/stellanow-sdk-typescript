@@ -18,9 +18,38 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-export interface ILogger {
-  debug(message: string, ...meta: any[]): void;
-  info(message: string, ...meta: any[]): void;
-  warn(message: string, ...meta: any[]): void;
-  error(message: string, ...meta: any[]): void;
+class StellaNowSignal<T extends (...args: any[]) => void   = () => void> {
+    private listeners: T[] = [];
+
+    /**
+     * Subscribe to the Signal.
+     * @param listener The function to be called when the event is triggered.
+     */
+    public subscribe(listener: T): void {
+        if (!this.listeners.includes(listener)) {
+            this.listeners.push(listener);
+        }
+    }
+
+    /**
+     * Unsubscribe from the signal.
+     * @param listener The function to remove from the event.
+     */
+    public unsubscribe(listener: T): void {
+        this.listeners = this.listeners.filter(l => l !== listener);
+    }
+
+    /**
+     * Trigger the signal, calling all subscribed listeners.
+     * @param args Arguments to pass to the listeners.
+     */
+    public trigger(...args: Parameters<T>): void {
+        try {
+            this.listeners.forEach(listener => listener(...args));
+        } catch {
+            // TODO: Log out an error?
+        }
+    }
 }
+
+export { StellaNowSignal };

@@ -18,30 +18,45 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-export interface StellaNowCredentials {
-  organizationId: string;
-  projectId: string;
-  apiKey: string;
-  apiSecret: string;
-  clientId: string;
-  oidcClient: string;
+export interface StellaNowEnvironmentConfig {
+    apiBaseUrl: string;
+    brokerUrl: string;
+
+    get authority(): string;
 }
 
-function createCredentials(
-  partial: Partial<StellaNowCredentials>,
-): StellaNowCredentials {
-  return {
-    organizationId: partial.organizationId ?? "",
-    projectId: partial.projectId ?? "",
-    apiKey: partial.apiKey ?? "",
-    apiSecret: partial.apiSecret ?? "",
-    clientId: partial.clientId ?? "",
-    oidcClient: partial.oidcClient ?? "event-ingestor",
-  };
+function createEnvConfig(
+    baseUrl: string,
+    brokerUrl: string
+): StellaNowEnvironmentConfig {
+    return {
+        apiBaseUrl: baseUrl,
+        brokerUrl,
+        get authority() {
+            return `${this.apiBaseUrl}/auth`;
+        },
+    };
 }
 
-export const Credentials = {
-  new(partial: Partial<StellaNowCredentials>): StellaNowCredentials {
-    return createCredentials(partial);
-  },
+export const EnvConfig = {
+    saasProd(): StellaNowEnvironmentConfig {
+        return createEnvConfig(
+            'https://api.prod.stella.cloud',
+            'wss://ingestor.prod.stella.cloud:8083/mqtt'
+        );
+    },
+
+    saasStage(): StellaNowEnvironmentConfig {
+        return createEnvConfig(
+            'https://api.stage.stella.cloud',
+            'wss://ingestor.stage.stella.cloud:8083/mqtt'
+        );
+    },
+
+    createCustomEnv(
+        baseUrl: string,
+        mqttBrokerUrl: string
+    ): StellaNowEnvironmentConfig {
+        return createEnvConfig(baseUrl, mqttBrokerUrl);
+    },
 };

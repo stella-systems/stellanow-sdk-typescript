@@ -18,8 +18,14 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-export { DefaultLogger } from "./lib/core/DefaultLogger"
-export * from "./lib/types"
-export { StellaSdk } from "./lib/StellaSdk"
-export * from "./lib/core/Messages"
-export * from "./lib/core/Events"
+export { DefaultLogger } from './lib/core/default-logger.ts';
+export * from './lib/types/index.ts';
+export * from './lib/core/messages.ts';
+export * from './lib/core/events.ts';
+export * from './lib/core/message-source.ts';
+export * from './lib/core/stellanow-signal.ts';
+export * from './lib/stella-now-sdk.ts';
+export * from './lib/sinks/i-stellanow-sink.ts';
+export * from './lib/sinks/mqtt/mqtt-sink.ts';
+export * from './lib/sinks/mqtt/auth-strategies/i-mqtt-auth-strategy.ts';
+export * from './lib/sinks/mqtt/auth-strategies/oidc-mqtt-auth-strategy.ts';

@@ -1,4 +1,4 @@
-// Copyright (C) 2022-2025 Stella Technologies (UK) Limited.
+// Copyright (C) 2025 Stella Technologies (UK) Limited.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,20 +18,18 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+import type { MqttClient } from 'mqtt';
 
-import {ILogger, StellaNowCredentials, StellaNowEnvironmentConfig} from "./types";
-import {StellaNowAuthenticationService} from "./core/Authentication/StellaNowAuthenticationService";
-
-export class StellaSdk {
-  private logger: ILogger;
-
-  constructor(logger: ILogger, envConfig: StellaNowEnvironmentConfig, credentials: StellaNowCredentials) {
-    this.logger = logger;
-  }
-
-  greet(name: string): string {
-    this.logger.info("Stella sdk registered");
-
-    return `Hello, ${name}!`;
-  }
+/**
+ * Interface for authentication strategies used to connect an MQTT client.
+ */
+interface IMqttAuthStrategy {
+    /**
+     * Reconnects the existing MQTT client if it is disconnected.
+     * @returns A promise that resolves when the client is reconnected.
+     * @throws {Error} If reconnection fails.
+     */
+    auth(mqttClient: MqttClient): Promise<void>;
 }
+
+export { IMqttAuthStrategy };

@@ -18,45 +18,9 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-export interface StellaNowEnvironmentConfig {
-  apiBaseUrl: string;
-  brokerUrl: string;
-
-  get authority(): string;
+export interface ILogger {
+    debug(message: string, ...meta: any[]): void;
+    info(message: string, ...meta: any[]): void;
+    warn(message: string, ...meta: any[]): void;
+    error(message: string, ...meta: any[]): void;
 }
-
-function createEnvConfig(
-  baseUrl: string,
-  brokerUrl: string,
-): StellaNowEnvironmentConfig {
-  return {
-    apiBaseUrl: baseUrl,
-    brokerUrl,
-    get authority() {
-      return `${this.apiBaseUrl}/auth`;
-    },
-  };
-}
-
-export const EnvConfig = {
-  saasProd(): StellaNowEnvironmentConfig {
-    return createEnvConfig(
-      "https://api.prod.stella.cloud",
-      "wss://ingestor.prod.stella.cloud:8083/mqtt",
-    );
-  },
-
-  saasStage(): StellaNowEnvironmentConfig {
-    return createEnvConfig(
-      "https://api.stage.stella.cloud",
-      "wss://ingestor.stage.stella.cloud:8083/mqtt",
-    );
-  },
-
-  createCustomEnv(
-    baseUrl: string,
-    mqttBrokerUrl: string,
-  ): StellaNowEnvironmentConfig {
-    return createEnvConfig(baseUrl, mqttBrokerUrl);
-  },
-};

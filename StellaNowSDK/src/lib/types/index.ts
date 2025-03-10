@@ -18,6 +18,11 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-export { Credentials, StellaNowCredentials } from "./Credentials";
-export { EnvConfig, StellaNowEnvironmentConfig } from "./EnvConfig";
-export { ILogger } from "./ILogger";
+export {
+    ProjectInfoFromEnv,
+    CredentialsFromEnv,
+    StellaProjectInfo,
+    StellaNowCredentials,
+} from './credentials.ts';
+export { EnvConfig, StellaNowEnvironmentConfig } from './env-config.ts';
+export { ILogger } from './i-logger.ts';
