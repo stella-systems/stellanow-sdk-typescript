@@ -20,7 +20,7 @@
 
 import type { ToJSON, StellaNowMessageWrapper } from './messages.ts';
 import { Convertors } from './messages.ts';
-import type { StellaProjectInfo } from '../types/index.ts';
+import type { StellaNowProjectInfo } from '../types/index.ts';
 
 class EventKey implements ToJSON {
     constructor(
@@ -56,7 +56,7 @@ class StellaNowEventWrapper implements ToJSON {
     }
 
     public static fromWrapper(
-        projectInfo: StellaProjectInfo,
+        projectInfo: StellaNowProjectInfo,
         value: StellaNowMessageWrapper
     ): StellaNowEventWrapper {
         const eventId = value.metadata.entityTypeIds[0].entityId;

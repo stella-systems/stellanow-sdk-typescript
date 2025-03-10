@@ -31,24 +31,52 @@ function formatTimestamp(date: Date): string {
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
+/**
+* A default implementation of the ILogger interface that logs messages to the console.
+* @remarks Includes a timestamp and log level in each message.
+*/
 export class DefaultLogger implements ILogger {
-    debug(message: string, ...meta: any[]) {
-        const timestamp = formatTimestamp(new Date());
-        console.debug(`[${timestamp}] debug: ${message}`, ...meta);
+    /**
+     * Logs a debug message to the console.
+     * @param message - The message to log.
+     * @param meta - Additional metadata to include in the log.
+     */
+    debug(message: string, ...meta: unknown[]): void {
+        const timestamp: string = formatTimestamp(new Date());
+        // eslint-disable-next-line no-console
+        console.debug(`[${timestamp}] DEBUG: ${message}`, ...meta);
     }
 
-    info(message: string, ...meta: any[]) {
-        const timestamp = formatTimestamp(new Date());
-        console.info(`[${timestamp}] info: ${message}`, ...meta);
+    /**
+     * Logs an info message to the console.
+     * @param message - The message to log.
+     * @param meta - Additional metadata to include in the log.
+     */
+    info(message: string, ...meta: unknown[]): void {
+        const timestamp: string = formatTimestamp(new Date());
+        // eslint-disable-next-line no-console
+        console.info(`[${timestamp}] INFO: ${message}`, ...meta);
     }
 
-    warn(message: string, ...meta: any[]) {
-        const timestamp = formatTimestamp(new Date());
-        console.warn(`[${timestamp}] warn: ${message}`, ...meta);
+    /**
+     * Logs a warning message to the console.
+     * @param message - The message to log.
+     * @param meta - Additional metadata to include in the log.
+     */
+    warn(message: string, ...meta: unknown[]): void {
+        const timestamp: string = formatTimestamp(new Date());
+        // eslint-disable-next-line no-console
+        console.warn(`[${timestamp}] WARN: ${message}`, ...meta);
     }
 
-    error(message: string, ...meta: any[]) {
-        const timestamp = formatTimestamp(new Date());
-        console.error(`[${timestamp}] error: ${message}`, ...meta);
+    /**
+     * Logs an error message to the console.
+     * @param message - The message to log.
+     * @param meta - Additional metadata to include in the log.
+     */
+    error(message: string, ...meta: unknown[]): void {
+        const timestamp: string = formatTimestamp(new Date());
+        // eslint-disable-next-line no-console
+        console.error(`[${timestamp}] ERROR: ${message}`, ...meta);
     }
 }

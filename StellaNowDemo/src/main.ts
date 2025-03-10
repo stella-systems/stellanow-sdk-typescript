@@ -22,8 +22,10 @@ import { UserDetailsMessage } from "./messages/UserDetailsMessage.js";
 import { PhoneNumberModel } from "./messages/models/PhoneNumber.js";
 
 import {
-  ProjectInfoFromEnv,
-  CredentialsFromEnv,
+  StellaNowProjectInfo,
+  ProjectInfo,
+  Credentials,
+  StellaNowCredentials,
   DefaultLogger,
   EnvConfig,
   StellaNowJsonMessage,
@@ -34,8 +36,8 @@ import {
 } from "stella-sdk-typescript";
 
 async function main() {
-  const stellaProjectInfo = ProjectInfoFromEnv();
-  const stellaCredentials = CredentialsFromEnv();
+  const stellaProjectInfo: StellaNowProjectInfo = ProjectInfo.createFromEnv();
+  const stellaCredentials: StellaNowCredentials = Credentials.createFromEnv();
   const stellaEnvConfig = EnvConfig.saasProd();
 
   console.log("API Base URL:", stellaEnvConfig.apiBaseUrl);

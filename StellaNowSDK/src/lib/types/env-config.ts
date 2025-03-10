@@ -18,13 +18,38 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+/**
+ * Interface representing the configuration for the StellaNow environment.
+ * @remarks Contains the API base URL, broker URL, and a getter for the authority URL.
+ */
 export interface StellaNowEnvironmentConfig {
+    /**
+     * The base URL for the API endpoint.
+     * @type {string}
+     */
     apiBaseUrl: string;
+
+    /**
+     * The WebSocket URL for the broker.
+     * @type {string}
+     */
     brokerUrl: string;
 
+    /**
+     * Gets the authority URL derived from the API base URL.
+     * @returns {string} The authority URL (e.g., 'https://api.prod.stella.cloud/auth').
+     */
     get authority(): string;
 }
 
+/**
+ * Creates a new StellaNowEnvironmentConfig instance with the specified base and broker URLs.
+ * @param baseUrl - The base URL for the API endpoint.
+ * @param brokerUrl - The URL for the broker.
+ * @returns {StellaNowEnvironmentConfig} A new configuration object with the specified URLs and an authority getter.
+ * @example
+ * const config = createEnvConfig('https://api.custom.stella.cloud', 'wss://ingestor.custom.stella.cloud:8083/mqtt');
+ */
 function createEnvConfig(
     baseUrl: string,
     brokerUrl: string
@@ -32,13 +57,24 @@ function createEnvConfig(
     return {
         apiBaseUrl: baseUrl,
         brokerUrl,
-        get authority() {
+        get authority(): string {
             return `${this.apiBaseUrl}/auth`;
         },
     };
 }
 
+/**
+ * Provides methods to create StellaNow environment configurations.
+ * @remarks Includes predefined configurations for production and staging environments,
+ * as well as a custom configuration creator.
+ */
 export const EnvConfig = {
+    /**
+     * Creates a StellaNowEnvironmentConfig instance for the production SaaS environment.
+     * @returns {StellaNowEnvironmentConfig} A configuration object for the production environment.
+     * @example
+     * const prodConfig = EnvConfig.saasProd();
+     */
     saasProd(): StellaNowEnvironmentConfig {
         return createEnvConfig(
             'https://api.prod.stella.cloud',
@@ -46,6 +82,12 @@ export const EnvConfig = {
         );
     },
 
+    /**
+     * Creates a StellaNowEnvironmentConfig instance for the staging SaaS environment.
+     * @returns {StellaNowEnvironmentConfig} A configuration object for the staging environment.
+     * @example
+     * const stageConfig = EnvConfig.saasStage();
+     */
     saasStage(): StellaNowEnvironmentConfig {
         return createEnvConfig(
             'https://api.stage.stella.cloud',
@@ -53,10 +95,18 @@ export const EnvConfig = {
         );
     },
 
+    /**
+     * Creates a custom StellaNowEnvironmentConfig instance with the specified base and broker URLs.
+     * @param baseUrl - The base URL for the API endpoint.
+     * @param brokerUrl - The URL for the broker.
+     * @returns {StellaNowEnvironmentConfig} A configuration object with the specified URLs.
+     * @example
+     * const customConfig = EnvConfig.createCustomEnv('https://api.custom.stella.cloud', 'wss://ingestor.custom.stella.cloud:8083/mqtt');
+     */
     createCustomEnv(
         baseUrl: string,
-        mqttBrokerUrl: string
+        brokerUrl: string
     ): StellaNowEnvironmentConfig {
-        return createEnvConfig(baseUrl, mqttBrokerUrl);
+        return createEnvConfig(baseUrl, brokerUrl);
     },
 };

@@ -24,7 +24,7 @@ import type { StellaNowMessageBase } from './core/messages.ts';
 import { StellaNowMessageWrapper } from './core/messages.ts';
 import type { StellaNowSignal } from './core/stellanow-signal.ts';
 import type { IStellaNowSink } from './sinks/i-stellanow-sink.ts';
-import type { StellaProjectInfo, ILogger } from './types/index.ts';
+import type { StellaNowProjectInfo, ILogger } from './types/index.ts';
 
 /**
  * The main SDK class for managing message sending and receiving in the StellaNow system.
@@ -65,7 +65,7 @@ class StellaNowSDK {
      * @param logger - The logger instance for logging events and errors.
      */
     constructor(
-        private projectInfo: StellaProjectInfo,
+        private projectInfo: StellaNowProjectInfo,
         private sink: IStellaNowSink,
         private source: IStellaNowMessageSource,
         private logger: ILogger

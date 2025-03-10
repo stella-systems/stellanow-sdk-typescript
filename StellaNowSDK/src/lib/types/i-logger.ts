@@ -18,9 +18,45 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+/**
+ * Interface defining the contract for logging functionality in the StellaNow SDK.
+ * @remarks Implementations of this interface should provide methods to log messages at
+ * different severity levels (debug, info, warn, error) with optional metadata.
+ */
 export interface ILogger {
-    debug(message: string, ...meta: any[]): void;
-    info(message: string, ...meta: any[]): void;
-    warn(message: string, ...meta: any[]): void;
-    error(message: string, ...meta: any[]): void;
+    /**
+     * Logs a debug message, typically used for detailed diagnostic information.
+     * @param message - The message to log.
+     * @param meta - Additional metadata to include with the log message.
+     * @example
+     * logger.debug('Processing request', { id: 123, user: 'alice' });
+     */
+    debug(message: string, ...meta: unknown[]): void;
+
+    /**
+     * Logs an info message, used for general informational messages.
+     * @param message - The message to log.
+     * @param meta - Additional metadata to include with the log message.
+     * @example
+     * logger.info('Service started', { port: 8080 });
+     */
+    info(message: string, ...meta: unknown[]): void;
+
+    /**
+     * Logs a warning message, indicating potential issues that do not prevent operation.
+     * @param message - The message to log.
+     * @param meta - Additional metadata to include with the log message.
+     * @example
+     * logger.warn('Configuration missing', { key: 'apiKey' });
+     */
+    warn(message: string, ...meta: unknown[]): void;
+
+    /**
+     * Logs an error message, indicating a failure or critical issue.
+     * @param message - The message to log.
+     * @param meta - Additional metadata to include with the log message.
+     * @example
+     * logger.error('Failed to connect', new Error('Connection timeout'));
+     */
+    error(message: string, ...meta: unknown[]): void;
 }

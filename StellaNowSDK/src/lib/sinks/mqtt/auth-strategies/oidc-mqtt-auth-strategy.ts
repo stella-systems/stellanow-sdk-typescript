@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 import type { MqttClient, IClientOptions } from 'mqtt';
+import { nanoid } from 'nanoid';
 import type {
     Configuration as DiscoveryConfig,
     TokenEndpointResponse,
@@ -34,7 +35,7 @@ import type { IMqttAuthStrategy } from './i-mqtt-auth-strategy.js';
 import type {
     StellaNowEnvironmentConfig,
     StellaNowCredentials,
-    StellaProjectInfo,
+    StellaNowProjectInfo,
     ILogger,
 } from '../../../types/index.ts';
 
@@ -52,7 +53,7 @@ interface ExtendedMqttClient extends MqttClient {
  */
 class OidcMqttAuthStrategy implements IMqttAuthStrategy {
     private logger: ILogger;
-    private projectInfo: StellaProjectInfo;
+    private projectInfo: StellaNowProjectInfo;
     private credentials: StellaNowCredentials;
     private envConfig: StellaNowEnvironmentConfig;
     private readonly discoveryDocumentUrl: string;
@@ -70,7 +71,7 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
     constructor(
         logger: ILogger,
         envConfig: StellaNowEnvironmentConfig,
-        projectInfo: StellaProjectInfo,
+        projectInfo: StellaNowProjectInfo,
         credentials: StellaNowCredentials
     ) {
         if (!logger || !envConfig || !projectInfo || !credentials) {
@@ -103,9 +104,14 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
             throw new Error('No valid access token available for reconnection');
         }
 
+        const clientId: string = this.credentials.sinkClientId ? this.credentials.sinkClientId : `StellaNowSdkTS-${nanoid(10)}`;
+
+        this.logger.info(`MQTT clientId: ${clientId}`);
+
         // Update options and reconnect
         mqttClient.options.username = accessToken; // Safe access with ExtendedMqttClient
         mqttClient.options.password = ''; // Reset password
+        mqttClient.options.clientId = clientId;
     }
 
     /**

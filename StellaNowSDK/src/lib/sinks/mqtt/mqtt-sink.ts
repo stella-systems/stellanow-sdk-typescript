@@ -21,7 +21,6 @@
 import { Mutex } from 'async-mutex';
 import type { MqttClient, Packet } from 'mqtt';
 import mqtt from 'mqtt';
-import { nanoid } from 'nanoid';
 
 import type { IMqttAuthStrategy } from './auth-strategies/i-mqtt-auth-strategy.ts';
 import type { StellaNowEventWrapper } from '../../core/events.ts';
@@ -131,7 +130,6 @@ class StellaNowMqttSink implements IStellaNowSink {
 
             if (!this.mqttClient) {
                 this.mqttClient =  mqtt.connect(this.envConfig.brokerUrl, {
-                    clientId: 'StellaNowSDK_' + nanoid(10),
                     username: '',   // Will be populated in the auth strategy
                     password: '',   // Will be populated in the auth strategy
                     clean: true,

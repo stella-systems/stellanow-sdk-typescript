@@ -18,7 +18,29 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-export { Credentials, StellaNowCredentials } from './credentials.ts';
-export { ProjectInfo, StellaNowProjectInfo } from './project-info.ts';
-export { EnvConfig, StellaNowEnvironmentConfig } from './env-config.ts';
-export { ILogger } from './i-logger.ts';
+/**
+ * Reads the value of an environment variable from process.env.
+ * @param name - The name of the environment variable to read.
+ * @param missing - The default value to return if the environment variable is not found (optional).
+ * @returns {string} The value of the environment variable or the default value/missing string.
+ * @remarks If the environment variable is not found and no default is provided, logs an error and returns an empty string.
+ * @example
+ * const apiKey = readEnv('API_KEY', 'default-key');
+ */
+function readEnv(
+    name: string,
+    missing: string | undefined = undefined
+): string {
+    const value = process.env[name] || missing;
+    if (value === undefined) {
+        // TODO: Should use some logger that has been passed in
+        // eslint-disable-next-line no-console
+        console.error(
+            'Cannot find the requested environment variable: ' + name
+        );
+        return '';
+    }
+    return value;
+}
+
+export { readEnv };

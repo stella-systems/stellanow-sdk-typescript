@@ -18,60 +18,70 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-export class StellaProjectInfo {
-    constructor(
-        public organizationId: string,
-        public projectId: string
-    ) {}
+import { InvalidArgumentError, MissingEnvVariableError } from '../core/exceptions.ts';
+import { readEnv } from '../core/utilities.ts';
+
+const DEFAULT_OIDC_CLIENT_ID: string = 'event-ingestor';
+
+/**
+ * Interface representing credentials for authenticating with the StellaNow system.
+ * @remarks Includes API key, API secret, client ID, and an OIDC client identifier.
+ */
+export interface StellaNowCredentials {
+    apiKey: string;
+    apiSecret: string;
+    sinkClientId: string;
+    oidcClient: string;
 }
 
-export class StellaNowCredentials {
-    static readonly DEFAULT_OIDC_CLIENT = 'event-ingestor';
-
-    constructor(
-        public apiKey: string,
-        public apiSecret: string,
-        public clientId: string,
-        public oidcClient: string
-    ) {}
-}
-
-/////////////////////////////////////////////
-// These utilities will be node specific
-/////////////////////////////////////////////
-
-//
-//  Will return the value of the requested environment variable if found, otherwise
-//  - the "missing" is returned if it is not undefiend
-//  - an error is logged and "" is returned if no missing value is defined
-//
-function readEnv(
-    name: string,
-    missing: string | undefined = undefined
-): string {
-    const value = process.env[name] || missing;
-    if (value === undefined) {
-        // TODO: Should use some logger that has been passed in
-        console.error(
-            'Cannot find the requested environment variable: ' + name
-        );
-        return '';
+/**
+ * Creates a StellaNowCredentials instance with the provided values.
+ * @param apiKey - The API key for authentication.
+ * @param apiSecret - The API secret for authentication.
+ * @param sinkClientId - The sinks client ID for the application.
+ * @param oidcClient - The OIDC client identifier (defaults to 'event-ingestor' if not provided).
+ * @returns {StellaNowCredentials} A new StellaNowCredentials instance.
+ * @throws {InvalidArgumentError} If required arguments (apiKey, apiSecret, clientId) are empty or not provided.
+ * @example
+ * const creds = create('key', 'secret', 'client', 'oidc');
+ */
+function create(apiKey: string, apiSecret: string, sinkClientId: string, oidcClient: string = DEFAULT_OIDC_CLIENT_ID): StellaNowCredentials {
+    // Validate required arguments
+    if (!apiKey) {
+        throw new InvalidArgumentError('apiKey', 'cannot be empty');
     }
-    return value;
+    if (!apiSecret) {
+        throw new InvalidArgumentError('apiSecret', 'cannot be empty');
+    }
+
+    return { apiKey, apiSecret, sinkClientId, oidcClient };
 }
 
-export function ProjectInfoFromEnv(): StellaProjectInfo {
-    return new StellaProjectInfo(
-        readEnv('ORGANIZATION_ID'),
-        readEnv('PROJECT_ID')
-    );
-}
+export const Credentials = {
+    create,
 
-export function CredentialsFromEnv(): StellaNowCredentials {
-    return new StellaNowCredentials(
-        readEnv('STELLA_USERNAME'),
-        readEnv('STELLA_PASSWORD'),
-        readEnv('CLIENT_ID'),
-        readEnv('OIDC_CLIENT', StellaNowCredentials.DEFAULT_OIDC_CLIENT)
-    );
-}
+    /**
+     * Creates a StellaNowCredentials instance using environment variables.
+     * @returns {StellaNowCredentials} A new instance populated with OIDC_USERNAME, OIDC_PASSWORD, SINK_CLIENT_ID,
+     * and OIDC_CLIENT (defaulting to 'event-ingestor' if not set) from the environment.
+     * @throws {MissingEnvVariableError} If required environment variables (OIDC_USERNAME, OIDC_PASSWORD, SINK_CLIENT_ID) are not set.
+     * @example
+     * const credentials = Credentials.createFromEnv();
+     */
+    createFromEnv(): StellaNowCredentials {
+        const apiKey = readEnv('OIDC_USERNAME');
+        const apiSecret = readEnv('OIDC_PASSWORD');
+        const sinkClientId = readEnv('SINK_CLIENT_ID');
+        const oidcClient = readEnv('OIDC_CLIENT', DEFAULT_OIDC_CLIENT_ID);
+
+        // Validate environment variables before calling create
+        if (!apiKey) {
+            throw new MissingEnvVariableError('OIDC_USERNAME');
+        }
+        if (!apiSecret) {
+            throw new MissingEnvVariableError('OIDC_PASSWORD');
+        }
+
+        return create(apiKey, apiSecret, sinkClientId, oidcClient);
+    }
+};
