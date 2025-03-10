@@ -147,7 +147,7 @@ class StellaNowMessageWrapper implements ToJSON {
     public readonly metadata: StellaNowMessageMetadata;
     public readonly payload: string = '';
 
-    public static fromMessage(stellaNowMessage: StellaNowMessageBase) {
+    public static fromMessage(stellaNowMessage: StellaNowMessageBase): StellaNowMessageWrapper {
         return new StellaNowMessageWrapper(
             stellaNowMessage.event_type_definition_id,
             stellaNowMessage.entity_type_ids,

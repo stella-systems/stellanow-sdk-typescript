@@ -77,35 +77,47 @@ async function main() {
 
   stellaSDK.OnConnected.subscribe(() => {
     console.log("Stella service connected");
-    // Messages will be handled by the SDK's event loop
   });
 
   try {
-    await stellaSDK.Start();
+    await stellaSDK.start();
     console.log("StellaNowSDK started successfully");
 
-    // Enqueue messages after starting
-    const userDetailsMessage = new UserDetailsMessage(
-        "e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8",
-        "d7db42f0-13ab-4c89-a7c8-fae73691d3ed",
-        new PhoneNumberModel(44, 753594),
-    );
+    // Start sending messages every 1 second
+    const intervalId = setInterval(() => {
+      const userDetailsMessage = new UserDetailsMessage(
+          `e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8-${Date.now()}`,
+          "d7db42f0-13ab-4c89-a7c8-fae73691d3ed",
+          new PhoneNumberModel(44, 753594),
+      );
 
-    const jsonMessage = new StellaNowJsonMessage(
-        "e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8",
-        "d7db42f0-13ab-4c89-a7c8-fae73691d3ed",
-        '{"game_id": 123}',
-    );
+      const jsonMessage = new StellaNowJsonMessage(
+          `e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8-${Date.now()}`,
+          "d7db42f0-13ab-4c89-a7c8-fae73691d3ed",
+          `{"game_id": ${Date.now()}}`,
+      );
 
-    stellaSDK.SendMessage(userDetailsMessage);
-    stellaSDK.SendMessage(jsonMessage);
+      stellaSDK.sendMessage(userDetailsMessage);
+      stellaSDK.sendMessage(jsonMessage);
+      console.log(`Enqueued messages at ${new Date().toISOString()}`);
+    }, 1000);
+
+    // Stop sending messages when Enter key is pressed
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (key: string) => { // Assert key as string since encoding is utf8
+      if (key === '\n' || key === '\r') {
+        clearInterval(intervalId);
+        console.log("Stopped sending messages. Press Ctrl+C to exit.");
+      }
+    });
+
+    process.stdin.resume();
   } catch (err) {
     console.error("Failed to start StellaNowSDK:", String(err));
     process.exit(1); // Exit on failure
   }
 
-  // Keep the process running (e.g., for event loop)
-  process.stdin.resume();
+  // Keep the process running until manually stopped
 }
 
 main().catch((err) => {

@@ -18,8 +18,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import type { EventKey, StellaNowEventWrapper } from '../core/events.js';
-import type { StellaNowSignal } from '../core/stellanow-signal.js';
+import type { StellaNowEventWrapper } from '../core/events.ts';
+import type { StellaNowSignal } from '../core/stellanow-signal.ts';
 
 /**
  * Interface for sinks that handle message publishing to external brokers.
@@ -41,8 +41,8 @@ interface IStellaNowSink {
     OnDisconnected: StellaNowSignal<() => void>;
 
     /**
-     * Event triggered when broker acknowledges reciept of the event
-     * @param eventKey The event key of the event.
+     * Event triggered when broker acknowledges receipt of the event
+     * @param eventId Unique identifier of the event (aka message_id)
      */
     OnMessageAck: StellaNowSignal<(eventId: string) => void>;
 
@@ -56,20 +56,29 @@ interface IStellaNowSink {
      * Starts the sink, initiating the connection to the broker.
      * @throws {Error} If the sink is already started or in an invalid state.
      */
-    Start(): Promise<void>;
+    start(): Promise<void>;
 
     /**
      * Stops the sink, terminating the connection to the broker.
      * @throws {Error} If the sink is not started or has been disposed.
      */
-    Stop(): Promise<void>;
+    stop(): Promise<void>;
 
     /**
      * Sends a message to the broker asynchronously.
      * @param event The event wrapper containing the message to send.
      * @throws {Error} If the sink is not connected or an error occurs during sending.
      */
-    SendMessageAsync(event: StellaNowEventWrapper): Promise<void>;
+    sendMessageAsync(event: StellaNowEventWrapper): Promise<void>;
+
+    // /**
+    //  * Cleans up resources used by the sink, including disconnecting from the MQTT broker
+    //  * and stopping the connection monitor.
+    //  * @remarks This method should be called manually when the sink is no longer needed.
+    //  * @example
+    //  * sink.dispose();
+    //  */
+    // dispose(): void;
 }
 
 export { IStellaNowSink };

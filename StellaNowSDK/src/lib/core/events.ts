@@ -18,9 +18,9 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import type { ToJSON, StellaNowMessageWrapper } from './messages.js';
-import { Convertors } from './messages.js';
-import type { StellaProjectInfo } from '../types/index.js';
+import type { ToJSON, StellaNowMessageWrapper } from './messages.ts';
+import { Convertors } from './messages.ts';
+import type { StellaProjectInfo } from '../types/index.ts';
 
 class EventKey implements ToJSON {
     constructor(

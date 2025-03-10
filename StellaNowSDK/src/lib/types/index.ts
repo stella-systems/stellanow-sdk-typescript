@@ -23,6 +23,6 @@ export {
     CredentialsFromEnv,
     StellaProjectInfo,
     StellaNowCredentials,
-} from './credentials.js';
-export { EnvConfig, StellaNowEnvironmentConfig } from './env-config.js';
-export { ILogger } from './i-logger.js';
+} from './credentials.ts';
+export { EnvConfig, StellaNowEnvironmentConfig } from './env-config.ts';
+export { ILogger } from './i-logger.ts';

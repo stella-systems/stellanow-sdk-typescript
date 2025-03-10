@@ -36,7 +36,7 @@ import type {
     StellaNowCredentials,
     StellaProjectInfo,
     ILogger,
-} from '../../../types/index.js';
+} from '../../../types/index.ts';
 
 type TokenSet = TokenEndpointResponse & TokenEndpointResponseHelpers;
 

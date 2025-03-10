@@ -32,6 +32,7 @@
     "noImplicitAny": true,
     "strictPropertyInitialization": true,
     "noImplicitThis": true,
+    "allowImportingTsExtensions": true
   },
   "include": ["src", "tests"]
 }

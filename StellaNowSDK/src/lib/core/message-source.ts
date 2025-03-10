@@ -18,7 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import type { EventKey, StellaNowEventWrapper } from './events.js';
+import type { StellaNowEventWrapper } from './events.ts';
 
 interface IStellaNowMessageSource {
     // Returns false if the queue is full
@@ -50,7 +50,7 @@ class FifoQueue implements IStellaNowMessageSource {
         this.InFlight.forEach(event => {
             this.Enqueue(event);
         });
-        this.InFlight.clear()
+        this.InFlight.clear();
     }
 
     Enqueue(event: StellaNowEventWrapper): boolean {
