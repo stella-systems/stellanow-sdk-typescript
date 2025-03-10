@@ -32,6 +32,7 @@ import {
 } from 'openid-client';
 
 import type { IMqttAuthStrategy } from './i-mqtt-auth-strategy.js';
+import { getErrorMessage } from '../../../core/utilities.ts';
 import type {
     StellaNowEnvironmentConfig,
     StellaNowCredentials,
@@ -133,7 +134,7 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
      */
     private validateTokenResponse(response: TokenSet | null): void {
         if (!response || response.error) {
-            const errorMessage = this.getErrorMessage(response?.error);
+            const errorMessage = getErrorMessage(response?.error);
             this.logger.error(`Failed to authenticate: ${errorMessage}`);
             this.tokenResponse = null;
             throw new Error('Failed to authenticate.');
@@ -160,7 +161,7 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
             );
             return this.configInstance;
         } catch (err: unknown) {
-            this.logger.error(`Error retrieving discovery document: ${this.getErrorMessage(err)}`);
+            this.logger.error(`Error retrieving discovery document: ${getErrorMessage(err)}`);
             this.configInstance = null;
             throw new Error('Could not retrieve discovery document');
         }
@@ -191,7 +192,7 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
             this.validateTokenResponse(this.tokenResponse); // Removed non-null assertion
             this.logger.info('Authentication successful');
         } catch (err: unknown) {
-            this.logger.error(`Authentication error: ${this.getErrorMessage(err)}`);
+            this.logger.error(`Authentication error: ${getErrorMessage(err)}`);
             throw err;
         }
     }
@@ -225,7 +226,7 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
             this.logger.info('Token refresh successful');
             return true;
         } catch (err: unknown) {
-            this.logger.error(`Token refresh error: ${this.getErrorMessage(err)}`);
+            this.logger.error(`Token refresh error: ${getErrorMessage(err)}`);
             return false;
         }
     }
@@ -238,17 +239,7 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
         return this.tokenResponse?.access_token;
     }
 
-    /**
-     * Extracts a message from an unknown error object.
-     * @param err The unknown error object.
-     * @returns {string} The error message or a default string if the message is unavailable.
-     */
-    private getErrorMessage(err: unknown): string {
-        if (err instanceof Error) {
-            return err.message;
-        }
-        return String(err) || 'Unknown error';
-    }
+
 }
 
 export { OidcMqttAuthStrategy };

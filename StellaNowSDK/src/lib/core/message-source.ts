@@ -20,62 +20,125 @@
 
 import type { StellaNowEventWrapper } from './events.ts';
 
+/**
+ * Interface representing a message source for the StellaNow SDK.
+ * Responsible for managing the message queue and in-flight messages.
+ */
 interface IStellaNowMessageSource {
-    // Returns false if the queue is full
-    Enqueue(event: StellaNowEventWrapper): boolean;
-    
-    ReEnqueueAll(): void;
+    /**
+     * Enqueues a message into the queue.
+     * @param event - The StellaNow event to enqueue.
+     * @returns True if the message was enqueued successfully.
+     */
+    enqueue(event: StellaNowEventWrapper): boolean;
 
-    MarkMessageAck(eventId: string): void;
+    /**
+     * Re-enqueues all messages that are currently in-flight.
+     */
+    reEnqueueAll(): void;
 
-    // Returns undefined if the queue is empty
-    TryDequeue(): StellaNowEventWrapper | undefined;
+    /**
+     * Marks a message as acknowledged.
+     * @param eventId - The unique identifier of the message to acknowledge.
+     */
+    markMessageAck(eventId: string): void;
 
-    IsEmpty(): boolean;
+    /**
+     * Attempts to dequeue a message from the queue.
+     * @returns The dequeued message, or undefined if the queue is empty.
+     */
+    tryDequeue(): StellaNowEventWrapper | undefined;
 
-    NumberInFlight() : number;
-    Length(): number;
+    /**
+     * Checks if the message queue is empty.
+     * @returns True if there are no messages in the queue.
+     */
+    isEmpty(): boolean;
+
+    /**
+     * Retrieves the number of messages currently in-flight.
+     * @returns The count of in-flight messages.
+     */
+    numberInFlight(): number;
+
+    /**
+     * Retrieves the total number of messages in the queue.
+     * @returns The length of the message queue.
+     */
+    length(): number;
 }
 
+/**
+ * A First-In-First-Out (FIFO) queue implementation of the IStellaNowMessageSource.
+ * This class manages messages in a queue and tracks those that are in-flight.
+ */
 class FifoQueue implements IStellaNowMessageSource {
-    private Items: StellaNowEventWrapper[] = [];
-    private InFlight: Map<string, StellaNowEventWrapper> = new Map<string, StellaNowEventWrapper>();
+    private items: StellaNowEventWrapper[] = [];
+    private inFlight: Map<string, StellaNowEventWrapper> = new Map<string, StellaNowEventWrapper>();
 
-    MarkMessageAck(eventId: string): void
-    {
-      this.InFlight.delete(eventId);
+    /**
+     * Marks a message as acknowledged, removing it from the in-flight tracking.
+     * @param eventId - The unique identifier of the message to acknowledge.
+     */
+    markMessageAck(eventId: string): void {
+        this.inFlight.delete(eventId);
     }
 
-    ReEnqueueAll(): void {
-        this.InFlight.forEach(event => {
-            this.Enqueue(event);
+    /**
+     * Re-enqueues all messages currently marked as in-flight back into the queue.
+     */
+    reEnqueueAll(): void {
+        this.inFlight.forEach(event => {
+            this.enqueue(event);
         });
-        this.InFlight.clear();
+        this.inFlight.clear();
     }
 
-    Enqueue(event: StellaNowEventWrapper): boolean {
-        this.Items.push(event);
+    /**
+     * Enqueues a message to the queue.
+     * @param event - The message event to enqueue.
+     * @returns True, indicating the message was enqueued.
+     */
+    enqueue(event: StellaNowEventWrapper): boolean {
+        this.items.push(event);
         return true;
     }
-    TryDequeue(): StellaNowEventWrapper | undefined {
-        var item = this.Items.shift();
-        if (item) {
-            this.InFlight.set(item.MessageId, item);
-        }
 
+    /**
+     * Attempts to dequeue a message from the queue.
+     * If a message is dequeued, it is added to the in-flight tracking.
+     * @returns The dequeued message, or undefined if the queue is empty.
+     */
+    tryDequeue(): StellaNowEventWrapper | undefined {
+        const item = this.items.shift();
+        if (item) {
+            this.inFlight.set(item.MessageId, item);
+        }
         return item;
     }
 
-    IsEmpty(): boolean {
-        return this.Items.length === 0;
-    }
-    
-    NumberInFlight() : number {
-        return this.InFlight.values.length;
+    /**
+     * Checks whether the message queue is empty.
+     * @returns True if there are no messages in the queue.
+     */
+    isEmpty(): boolean {
+        return this.items.length === 0;
     }
 
-    Length(): number {
-        return this.Items.length;
+    /**
+     * Retrieves the number of messages currently in-flight.
+     * @returns The count of in-flight messages.
+     */
+    numberInFlight(): number {
+        return this.inFlight.size;
+    }
+
+    /**
+     * Retrieves the total number of messages in the queue.
+     * @returns The number of messages waiting in the queue.
+     */
+    length(): number {
+        return this.items.length;
     }
 }
 

@@ -18,54 +18,94 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import type { ToJSON, StellaNowMessageWrapper } from './messages.ts';
-import { Convertors } from './messages.ts';
-import type { StellaNowProjectInfo } from '../types/index.ts';
+import type {StellaNowMessageWrapper, ToJSON} from './messages.ts';
+import {Converters} from './messages.ts';
+import type {StellaNowProjectInfo} from '../types/index.ts';
 
+/**
+ * Represents the key for a StellaNow event, consisting of organization, project, and entity identifiers.
+ * @remarks Implements the ToJSON interface to provide a JSON representation of the event key.
+ */
 class EventKey implements ToJSON {
+    /**
+     * Creates a new EventKey instance.
+     * @param organizationId - The unique identifier for the organization.
+     * @param projectId - The unique identifier for the project within the organization.
+     * @param entityId - The unique identifier for the entity associated with the event.
+     */
     constructor(
         public organizationId: string,
         public projectId: string,
-        public eventId: string
+        public entityId: string
     ) {}
 
-    public toJSON(): any {
+    /**
+     * Converts the EventKey instance to a JSON object.
+     * @returns {object} The JSON representation of the EventKey.
+     */
+    public toJSON(): object {
         return {
             organizationId: this.organizationId,
             projectId: this.projectId,
-            eventId: this.eventId,
+            entityId: this.entityId,
         };
     }
 }
 
+/**
+ * Represents a wrapper for StellaNow events, combining an event key with a message wrapper.
+ * @remarks Implements the ToJSON interface to provide a JSON representation of the event wrapper.
+ */
 class StellaNowEventWrapper implements ToJSON {
+    /**
+     * Creates a new StellaNowEventWrapper instance.
+     * @param eventKey - The EventKey instance representing the event's key.
+     * @param value - The StellaNowMessageWrapper containing the event's message data.
+     */
     constructor(
         public eventKey: EventKey,
         public value: StellaNowMessageWrapper
     ) {}
 
-    get MessageId () : string {
-      return this.value.metadata.messageId;
+    /**
+     * Gets the message ID from the wrapped StellaNowMessageWrapper.
+     * @returns {string} The unique identifier of the message.
+     */
+    get MessageId(): string {
+        return this.value.metadata.messageId;
     }
 
-    public toJSON(): any {
+    /**
+     * Converts the StellaNowEventWrapper to a JSON object.
+     * @returns {object} The JSON representation of the event wrapper, containing the key and value.
+     */
+    public toJSON(): object {
         return {
-            key: Convertors.Convert(this.eventKey),
-            value: Convertors.Convert(this.value),
+            key: Converters.convert(this.eventKey),
+            value: Converters.convert(this.value),
         };
     }
 
+    /**
+     * Creates a new StellaNowEventWrapper from a project info and message wrapper.
+     * @param projectInfo - The project information containing organization and project IDs.
+     * @param value - The StellaNowMessageWrapper containing the event's message data.
+     * @returns {StellaNowEventWrapper} A new instance of StellaNowEventWrapper.
+     * @throws {Error} If the entityTypeIds array in the message wrapper is empty.
+     */
     public static fromWrapper(
         projectInfo: StellaNowProjectInfo,
         value: StellaNowMessageWrapper
     ): StellaNowEventWrapper {
-        const eventId = value.metadata.entityTypeIds[0].entityId;
+        if (!value.metadata.entityTypeIds.length) {
+            throw new Error('EntityTypeIds array cannot be empty');
+        }
 
         return new StellaNowEventWrapper(
             new EventKey(
                 projectInfo.organizationId,
                 projectInfo.projectId,
-                eventId
+                value.metadata.entityTypeIds[0].entityId
             ),
             value
         );

@@ -43,4 +43,16 @@ function readEnv(
     return value;
 }
 
-export { readEnv };
+/**
+ * Extracts a message from an unknown error object.
+ * @param err The unknown error object.
+ * @returns {string} The error message or a default string if the message is unavailable.
+ */
+function getErrorMessage(err: unknown): string {
+    if (err instanceof Error) {
+        return err.message;
+    }
+    return String(err) || 'Unknown error';
+}
+
+export { readEnv, getErrorMessage};

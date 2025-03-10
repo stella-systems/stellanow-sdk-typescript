@@ -18,160 +18,145 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-interface ToJSON {
-    toJSON(): object;
-}
+import * as crypto from 'crypto'; // Explicit import for type safety
 
-function IstoJSON(obj: any): obj is ToJSON {
-    return (
-        obj != null &&
-        typeof obj === 'object' &&
-        'toJSON' in obj &&
-        typeof obj.toJSON === 'function'
-    );
-}
+import { Converters, ToJSON } from './converters.ts';
+import { getErrorMessage } from './utilities.ts';
 
-function formatDateToISO8601(date: Date): string {
-    // Get date components in the ISO 8601 format
-    const year = date.getUTCFullYear();
-    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
-    const day = date.getUTCDate().toString().padStart(2, '0');
-
-    const hours = date.getUTCHours().toString().padStart(2, '0');
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-    const seconds = date.getUTCSeconds().toString().padStart(2, '0');
-
-    // Get milliseconds and convert to microseconds by appending '000'
-    const milliseconds = date.getUTCMilliseconds().toString().padStart(3, '0');
-    const microseconds = milliseconds + '000';
-
-    // Construct the final string in the desired format
-    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${microseconds}Z`;
-}
-
-class Convertors {
-    static Convert(value: Date): string;
-    static Convert(value: string): string;
-    static Convert(value: number): string;
-    static Convert(value: ToJSON): object;
-    static Convert(value: ToJSON[]): object;
-
-    static Convert(
-        value: Date | string | number | ToJSON | ToJSON[]
-    ): string | object | object[] {
-        if (Array.isArray(value)) {
-            return value.map(v => v.toJSON());
-        } else if (value instanceof Date) {
-            return formatDateToISO8601(value);
-        } else if (IstoJSON(value)) {
-            return value.toJSON();
-        } else if (typeof value === 'boolean') {
-            return value ? 'true' : 'false';
-        } else if (typeof value === 'string') {
-            return value;
-        } else if (typeof value === 'number') {
-            return value.toString();
-        }
-        throw 'Unknown type passed to convert';
-    }
-}
-
+/**
+ * Represents an entity type with its definition and identifier.
+ */
 class EntityType implements ToJSON {
+    /**
+     * Creates a new EntityType instance.
+     * @param entityTypeDefinitionId - The definition identifier of the entity type.
+     * @param entityId - The unique identifier of the entity.
+     */
     constructor(
         public readonly entityTypeDefinitionId: string,
         public readonly entityId: string
     ) {}
 
-    public toJSON(): any {
+    /**
+     * Converts the EntityType instance to a JSON object.
+     * @returns {object} The JSON representation of the EntityType.
+     */
+    public toJSON(): object {
         return {
-            entityTypeDefinitionId: Convertors.Convert(
-                this.entityTypeDefinitionId
-            ),
-            entityId: Convertors.Convert(this.entityId),
+            entityTypeDefinitionId: Converters.convert(this.entityTypeDefinitionId),
+            entityId: Converters.convert(this.entityId),
         };
     }
 }
 
-class StellaNowMessageBase implements ToJSON {
-    constructor(
-        public readonly event_type_definition_id: string,
-        public readonly entity_type_ids: EntityType[]
-    ) {}
-
-    public toJSON(): any {
-        return {};
-    }
-}
-
-class StellaNowJsonMessage extends StellaNowMessageBase {
-    public readonly json_object: object;
-
-    constructor(
-        public readonly patron_id: string,
-        public readonly user_id: string,
-        json_string: string
-    ) {
-        super('user_details', [new EntityType('patron_id', patron_id)]);
-        this.json_object = JSON.parse(json_string);
-    }
-
-    public toJSON(): any {
-        return {
-            ...this.json_object,
-            ...super.toJSON(),
-        };
-    }
-}
-
-class StellaNowMessageMetadata implements ToJSON {
+/**
+ * Metadata associated with a StellaNow message.
+ */
+class MessageMetadata implements ToJSON {
+    /**
+     * Creates a new MessageMetadata instance.
+     * @param messageId - The unique message identifier.
+     * @param messageOriginDateUtc - The message's origin date in UTC.
+     * @param eventTypeDefinitionId - The event type definition identifier.
+     * @param entityTypeIds - An array of EntityType instances.
+     */
     constructor(
         public readonly messageId: string,
-        public readonly messageOriginDateUTC: Date,
+        public readonly messageOriginDateUtc: Date,
         public readonly eventTypeDefinitionId: string,
         public readonly entityTypeIds: EntityType[]
     ) {}
 
-    public toJSON(): any {
+    /**
+     * Converts the metadata to a JSON object.
+     * @returns {object} The JSON representation of the metadata.
+     */
+    public toJSON(): object {
         return {
-            messageId: Convertors.Convert(this.messageId),
-            messageOriginDateUTC: Convertors.Convert(this.messageOriginDateUTC),
-            eventTypeDefinitionId: Convertors.Convert(
-                this.eventTypeDefinitionId
-            ),
-            entityTypeIds: Convertors.Convert(this.entityTypeIds),
+            messageId: Converters.convert(this.messageId),
+            messageOriginDateUTC: Converters.convert(this.messageOriginDateUtc),
+            eventTypeDefinitionId: Converters.convert(this.eventTypeDefinitionId),
+            entityTypeIds: Converters.convert(this.entityTypeIds),
         };
     }
 }
 
+/**
+ * Base class for StellaNow messages.
+ */
+class StellaNowMessageBase implements ToJSON {
+    /**
+     * Creates a new StellaNowMessageBase instance.
+     * @param eventTypeDefinitionId - The event type definition identifier.
+     * @param entityTypeIds - An array of EntityType instances.
+     */
+    constructor(
+        public readonly eventTypeDefinitionId: string,
+        public readonly entityTypeIds: EntityType[]
+    ) {}
+
+    /**
+     * Converts the message base to a JSON object.
+     * @returns {object} An empty JSON object (to be overridden by subclasses).
+     */
+    public toJSON(): object {
+        return {};
+    }
+}
+
+/**
+ * A wrapper for StellaNow messages that includes metadata and payload.
+ */
 class StellaNowMessageWrapper implements ToJSON {
-    public readonly metadata: StellaNowMessageMetadata;
+    public readonly metadata: MessageMetadata;
     public readonly payload: string = '';
 
+    /**
+     * Creates a new StellaNowMessageWrapper from a base message.
+     * @param stellaNowMessage - The base StellaNow message.
+     * @returns {StellaNowMessageWrapper} A wrapped message instance.
+     */
     public static fromMessage(stellaNowMessage: StellaNowMessageBase): StellaNowMessageWrapper {
         return new StellaNowMessageWrapper(
-            stellaNowMessage.event_type_definition_id,
-            stellaNowMessage.entity_type_ids,
+            stellaNowMessage.eventTypeDefinitionId,
+            stellaNowMessage.entityTypeIds,
             JSON.stringify(stellaNowMessage.toJSON())
         );
     }
 
+    /**
+     * Creates a new StellaNowMessageWrapper instance.
+     * @param eventTypeDefinitionId - The event type definition identifier.
+     * @param entityTypeIds - An array of EntityType instances.
+     * @param messageJson - The JSON string representing the message payload.
+     * @throws {SyntaxError} If the messageJson is not valid JSON.
+     * @throws {Error} If initialization fails due to other unexpected errors.
+     */
     constructor(
-        eventTypeDefinitionIdOrMessage: string,
+        public readonly eventTypeDefinitionId: string,
         entityTypeIds: EntityType[],
         messageJson: string
     ) {
-        this.metadata = new StellaNowMessageMetadata(
-            crypto.randomUUID(), // Equivalent to Guid.NewGuid().ToString()
-            new Date('2025-02-18T11:09:44.650447Z'), //new Date(), // Equivalent to DateTime.UtcNow
-            eventTypeDefinitionIdOrMessage,
-            entityTypeIds
-        );
-        this.payload = messageJson;
+        try {
+            this.metadata = new MessageMetadata(
+                crypto.randomUUID(),
+                new Date(),
+                eventTypeDefinitionId,
+                entityTypeIds
+            );
+            this.payload = messageJson;
+        } catch (e) {
+            throw new Error(`Failed to initialize wrapper: ${getErrorMessage(e)}`);
+        }
     }
 
-    public toJSON(): any {
+    /**
+     * Converts the wrapped message to a JSON object.
+     * @returns {object} The JSON representation containing metadata and payload.
+     */
+    public toJSON(): object {
         return {
-            metadata: Convertors.Convert(this.metadata),
+            metadata: Converters.convert(this.metadata),
             payload: this.payload,
         };
     }
@@ -179,10 +164,8 @@ class StellaNowMessageWrapper implements ToJSON {
 
 export {
     ToJSON,
-    Convertors,
+    Converters,
     EntityType,
     StellaNowMessageBase,
-    StellaNowJsonMessage,
-    StellaNowMessageMetadata,
     StellaNowMessageWrapper,
 };

@@ -88,3 +88,14 @@ export class InvalidArgumentError extends StellaNowError {
      */
     public readonly reason: string;
 }
+
+/**
+ * Error thrown when an unknown type is passed to a conversion method.
+ * @remarks Includes details about the unsupported type for debugging.
+ */
+export class UnknownTypeError extends StellaNowError {
+    constructor(type: string) {
+        super(`Unknown type passed to convert: ${type}`, 'UNKNOWN_TYPE');
+        this.name = 'UnknownTypeError';
+    }
+}

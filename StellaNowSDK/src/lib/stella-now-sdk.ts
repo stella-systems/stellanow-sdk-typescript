@@ -74,7 +74,7 @@ class StellaNowSDK {
         this.OnDisconnected = sink.OnDisconnected;
         this.OnError = sink.OnError;
 
-        sink.OnMessageAck.subscribe((eventId) => source.MarkMessageAck(eventId));
+        sink.OnMessageAck.subscribe((eventId) => source.markMessageAck(eventId));
 
         setInterval(() => {
             this.eventLoop().catch((err) => {
@@ -124,7 +124,7 @@ class StellaNowSDK {
      * sdk.sendEvent(myEvent);
      */
     public sendEvent(event: StellaNowEventWrapper): void {
-        this.source.Enqueue(event);
+        this.source.enqueue(event);
         this.logger.debug(`Event enqueued: ${event.value.metadata.messageId}`);
     }
 
@@ -158,15 +158,15 @@ class StellaNowSDK {
             return;
         }
 
-        if (this.source.IsEmpty()) {
+        if (this.source.isEmpty()) {
             this.logger.debug('No queued messages to publish');
             return;
         }
 
         this.logger.debug('Publishing queued messages');
 
-        while (!this.source.IsEmpty()) {
-            const event = this.source.TryDequeue();
+        while (!this.source.isEmpty()) {
+            const event = this.source.tryDequeue();
 
             if (event) {
                 try {
@@ -175,7 +175,7 @@ class StellaNowSDK {
                     this.logger.debug(`Event ${event.value.metadata.messageId} published successfully`);
                 } catch (err) {
                     this.logger.error(`Failed to publish event ${event.value.metadata.messageId}: ${String(err)}`);
-                    this.source.Enqueue(event); // Requeue on failure
+                    this.source.enqueue(event); // Requeue on failure
                 }
             }
         }

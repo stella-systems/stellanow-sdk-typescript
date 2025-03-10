@@ -1,5 +1,6 @@
 # Project Specific
 ./src/**/*.js
+combined_files.txt
 
 # Dependency directories
 node_modules/
@@ -39,5 +40,3 @@ yarn-error.log*
 
 # Yarn Integrity file
 .yarn-integrity
-
-.DS_Store

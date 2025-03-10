@@ -18,111 +18,108 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import { UserDetailsMessage } from "./messages/UserDetailsMessage.js";
-import { PhoneNumberModel } from "./messages/models/PhoneNumber.js";
-
+import type {
+    StellaNowProjectInfo,
+    StellaNowCredentials} from 'stella-sdk-typescript';
 import {
-  StellaNowProjectInfo,
-  ProjectInfo,
-  Credentials,
-  StellaNowCredentials,
-  DefaultLogger,
-  EnvConfig,
-  StellaNowJsonMessage,
-  StellaNowSDK,
-  StellaNowMqttSink,
-  FifoQueue,
-  OidcMqttAuthStrategy
-} from "stella-sdk-typescript";
+    ProjectInfo,
+    Credentials,
+    DefaultLogger,
+    EnvConfig,
+    StellaNowSDK,
+    StellaNowMqttSink,
+    FifoQueue,
+    OidcMqttAuthStrategy,
+} from 'stella-sdk-typescript';
 
-async function main() {
-  const stellaProjectInfo: StellaNowProjectInfo = ProjectInfo.createFromEnv();
-  const stellaCredentials: StellaNowCredentials = Credentials.createFromEnv();
-  const stellaEnvConfig = EnvConfig.saasProd();
+import { PhoneNumberModel } from './messages/models/PhoneNumber.ts';
+import { UserDetailsMessage } from './messages/UserDetailsMessage.ts';
 
-  console.log("API Base URL:", stellaEnvConfig.apiBaseUrl);
-  console.log("Broker URL:", stellaEnvConfig.brokerUrl);
 
-  const logger = new DefaultLogger();
+async function main(): Promise<void> {
+    const stellaProjectInfo: StellaNowProjectInfo = ProjectInfo.createFromEnv();
+    const stellaCredentials: StellaNowCredentials = Credentials.createFromEnv();
+    const stellaEnvConfig = EnvConfig.saasProd();
 
-  // Instantiate OidcMqttAuthStrategy directly
-  const authStrategy = new OidcMqttAuthStrategy(
-      logger,
-      stellaEnvConfig,
-      stellaProjectInfo,
-      stellaCredentials,
-  );
+    const logger = new DefaultLogger();
 
-  const stellaMqttSink = new StellaNowMqttSink(
-      logger,
-      authStrategy,
-      stellaProjectInfo,
-      stellaEnvConfig,
-  );
+    logger.info('API Base URL:', stellaEnvConfig.apiBaseUrl);
+    logger.info('Broker URL:', stellaEnvConfig.brokerUrl);
 
-  const stellaSDK = new StellaNowSDK(
-      stellaProjectInfo,
-      stellaMqttSink,
-      new FifoQueue(),
-      logger,
-  );
+    // Instantiate OidcMqttAuthStrategy directly
+    const authStrategy = new OidcMqttAuthStrategy(
+        logger,
+        stellaEnvConfig,
+        stellaProjectInfo,
+        stellaCredentials
+    );
 
-  console.log("Starting service up");
+    const stellaMqttSink = new StellaNowMqttSink(
+        logger,
+        authStrategy,
+        stellaProjectInfo,
+        stellaEnvConfig
+    );
 
-  stellaSDK.OnError.subscribe((err) => {
-    console.log("Error with stella service:", err);
-  });
+    const stellaSDK = new StellaNowSDK(
+        stellaProjectInfo,
+        stellaMqttSink,
+        new FifoQueue(),
+        logger
+    );
 
-  stellaSDK.OnDisconnected.subscribe(() => {
-    console.log("Stella service disconnected");
-  });
+    logger.info('Starting service up');
 
-  stellaSDK.OnConnected.subscribe(() => {
-    console.log("Stella service connected");
-  });
-
-  try {
-    await stellaSDK.start();
-    console.log("StellaNowSDK started successfully");
-
-    // Start sending messages every 1 second
-    const intervalId = setInterval(() => {
-      const userDetailsMessage = new UserDetailsMessage(
-          `e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8-${Date.now()}`,
-          "d7db42f0-13ab-4c89-a7c8-fae73691d3ed",
-          new PhoneNumberModel(44, 753594),
-      );
-
-      const jsonMessage = new StellaNowJsonMessage(
-          `e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8-${Date.now()}`,
-          "d7db42f0-13ab-4c89-a7c8-fae73691d3ed",
-          `{"game_id": ${Date.now()}}`,
-      );
-
-      stellaSDK.sendMessage(userDetailsMessage);
-      stellaSDK.sendMessage(jsonMessage);
-      console.log(`Enqueued messages at ${new Date().toISOString()}`);
-    }, 1000);
-
-    // Stop sending messages when Enter key is pressed
-    process.stdin.setEncoding('utf8');
-    process.stdin.on('data', (key: string) => { // Assert key as string since encoding is utf8
-      if (key === '\n' || key === '\r') {
-        clearInterval(intervalId);
-        console.log("Stopped sending messages. Press Ctrl+C to exit.");
-      }
+    stellaSDK.OnError.subscribe(err => {
+        logger.info('Error with stella service:', err);
     });
 
-    process.stdin.resume();
-  } catch (err) {
-    console.error("Failed to start StellaNowSDK:", String(err));
-    process.exit(1); // Exit on failure
-  }
+    stellaSDK.OnDisconnected.subscribe(() => {
+        logger.info('Stella service disconnected');
+    });
 
-  // Keep the process running until manually stopped
+    stellaSDK.OnConnected.subscribe(() => {
+        logger.info('Stella service connected');
+    });
+
+    try {
+        await stellaSDK.start();
+        logger.info('StellaNowSDK started successfully');
+
+        // Start sending messages every 1 second
+        const intervalId = setInterval(() => {
+            const userDetailsMessage = new UserDetailsMessage(
+                'e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8',
+                'd7db42f0-13ab-4c89-a7c8-fae73691d3ed',
+                new PhoneNumberModel(44, 753594)
+            );
+
+            stellaSDK.sendMessage(userDetailsMessage);
+            logger.info(`Enqueued messages at ${new Date().toISOString()}`);
+        }, 1000);
+
+        // Stop sending messages when Enter key is pressed
+        process.stdin.setEncoding('utf8');
+        process.stdin.on('data', (key: string) => {
+            // Assert key as string since encoding is utf8
+            if (key === '\n' || key === '\r') {
+                clearInterval(intervalId);
+                logger.info('Stopped sending messages. Press Ctrl+C to exit.');
+            }
+        });
+
+        process.stdin.resume();
+    } catch (err) {
+        logger.error('Failed to start StellaNowSDK:', String(err));
+        process.exit(1); // Exit on failure
+    }
+
+    // Keep the process running until manually stopped
 }
 
-main().catch((err) => {
-  console.error("Main process failed:", String(err));
-  process.exit(1);
+main().catch(err => {
+    const logger = new DefaultLogger();
+
+    logger.error('Main process failed:', String(err));
+    process.exit(1);
 });

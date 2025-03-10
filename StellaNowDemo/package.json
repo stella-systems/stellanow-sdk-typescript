@@ -9,28 +9,26 @@
     "build": "tsc",
     "dev": "tsx src/main.ts",
 
-    "lint": "eslint 'src/**/*.{ts,tsx}' 'tests/**/*.{ts,tsx}'",
-    "lint:fix": "eslint 'src/**/*.{ts,tsx}' 'test/**/*.{ts,tsx}' --fix",
+    "lint": "eslint 'src/**/*.{ts,tsx}'",
+    "lint:fix": "eslint 'src/**/*.{ts,tsx}' --fix",
     "format": "prettier --write 'src/**/*.{js,ts,tsx,json,md}'"
   },
   "keywords": [],
   "description": "",
   "dependencies": {
-    "mqtt": "^5.10.3",
-    "stella-sdk-typescript": "file:../StellaNowSDK",
-    "ws": "^8.18.0"
+    "stella-sdk-typescript": "file:../StellaNowSDK"
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
     "@typescript-eslint/parser": "^8.24.0",
     "eslint": "^9.20.1",
-    "eslint-config-prettier": "^10.0.1",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-prettier": "^5.2.3",
-    "typescript-eslint": "^8.24.1",
-    
-    "@types/mqtt": "^2.5.0",
-    "@types/ws": "^8.5.14",
-    "tsx": "^4.19.3",
-    "typescript": "^5.7.3"
+    "globals": "^15.15.0",
+    "prettier": "^3.5.3",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.24.1"
   }
 }
