@@ -1,9 +1,9 @@
-import type { ToJSON } from 'stella-sdk-typescript';
+import type { ToJSON } from 'stellanow-sdk';
 import {
     StellaNowMessageBase,
     Converters,
     EntityType
-} from 'stella-sdk-typescript';
+} from 'stellanow-sdk';
 
 export class UserLoginMessage extends StellaNowMessageBase implements ToJSON {
     constructor(

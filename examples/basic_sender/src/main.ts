@@ -21,7 +21,7 @@
 import {
     DefaultLogger,
     StellaNowSDK,
-} from 'stella-sdk-typescript';
+} from 'stellanow-sdk';
 
 import { PhoneNumberModel } from './messages/models/PhoneNumber.ts';
 import { UserDetailsMessage } from './messages/UserDetailsMessage.ts';

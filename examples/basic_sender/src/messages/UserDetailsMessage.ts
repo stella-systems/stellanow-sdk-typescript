@@ -1,9 +1,9 @@
-import type { ToJSON } from 'stella-sdk-typescript';
+import type { ToJSON } from 'stellanow-sdk';
 import {
     StellaNowMessageBase,
     Converters,
     EntityType
-} from 'stella-sdk-typescript';
+} from 'stellanow-sdk';
 
 import type { PhoneNumberModel } from './models/PhoneNumber.js';
 

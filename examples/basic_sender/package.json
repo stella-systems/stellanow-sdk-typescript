@@ -1,14 +1,13 @@
 {
-  "name": "stellanowdemo",
+  "name": "stellanow-demo",
   "version": "0.0.1",
   "author": "Stella Technologies (UK) Limited",
   "license": "MIT",
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsx src/main.ts",
-
+    "build": "tsup",
+    "dev": "tsup src/main.ts && node dist/main.js",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "lint:fix": "eslint 'src/**/*.{ts,tsx}' --fix",
     "format": "prettier --write 'src/**/*.{js,ts,tsx,json,md}'"
@@ -16,7 +15,7 @@
   "keywords": [],
   "description": "",
   "dependencies": {
-    "stella-sdk-typescript": "file:../.."
+    "stellanow-sdk": "file:../.."
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
