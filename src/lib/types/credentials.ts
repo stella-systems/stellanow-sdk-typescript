@@ -44,7 +44,7 @@ export interface StellaNowCredentials {
  * @example
  * const creds = create('key', 'secret', 'client', 'oidc');
  */
-function create(apiKey: string, apiSecret: string, sinkClientId: string, oidcClient: string = DEFAULT_OIDC_CLIENT_ID): StellaNowCredentials {
+function create(apiKey: string, apiSecret: string, sinkClientId: string = '', oidcClient: string = DEFAULT_OIDC_CLIENT_ID): StellaNowCredentials {
     // Validate required arguments
     if (!apiKey) {
         throw new InvalidArgumentError('apiKey', 'cannot be empty');
