@@ -20,16 +20,19 @@
 
 import type { ILogger } from '../types/index.ts';
 
+const utcFormatter = new Intl.DateTimeFormat('en-GB', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    timeZone: 'UTC'
+});
+
 function formatTimestamp(date: Date): string {
-    return new Intl.DateTimeFormat('sv-SE', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-    }).format(date);
+    return utcFormatter.format(date);
 }
 
 /**
