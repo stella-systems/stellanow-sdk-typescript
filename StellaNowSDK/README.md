@@ -1,1 +1,0 @@
-# Stella SDK - TypeScript

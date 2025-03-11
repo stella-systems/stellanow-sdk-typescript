@@ -16,7 +16,7 @@
   "keywords": [],
   "description": "",
   "dependencies": {
-    "stella-sdk-typescript": "file:../StellaNowSDK"
+    "stella-sdk-typescript": "file:../.."
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
