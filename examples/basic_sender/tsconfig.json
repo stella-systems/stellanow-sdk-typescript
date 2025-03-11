@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+      "outDir": "dist",
+      "module": "Node16",
+      "target": "ES6",
+      "strict": true,
+      "esModuleInterop": true,
+      "moduleResolution": "node16",
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true,
+      "declaration": true,
+      "sourceMap": true,
+      "allowImportingTsExtensions": true
+    },
+    "include": ["src"]
+  }

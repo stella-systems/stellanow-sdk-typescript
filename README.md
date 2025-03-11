@@ -1,241 +1,377 @@
 # StellaNowSDK
+
 ## Introduction
-Welcome to the StellaNow Typescript SDK. This SDK is designed to provide an easy-to-use interface for developers integrating their NodeJS Typescript applications with the StellaNow Platform. The SDK communicates with the StellaNow Platform using the MQTT protocol over secure WebSockets.
+
+Welcome to the StellaNow TypeScript SDK! This SDK provides an easy-to-use interface for developers to integrate their Node.js TypeScript applications with the StellaNow Platform. The SDK facilitates communication with the StellaNow Platform using the MQTT protocol over secure WebSockets, offering robust features for message handling and authentication.
+
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Key Features](#key-features)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Configuration](#configuration)
+  - [Setting Up StellaNow SDK](#setting-up-stellanow-sdk)
+  - [Using OIDC Authentication](#using-oidc-authentication)
+- [Usage](#usage)
+  - [Sample Application](#sample-application)
+  - [Message Formatting](#message-formatting)
+- [Customization](#customization)
+  - [Customizing the Message Queue Strategy](#customizing-the-message-queue-strategy)
+  - [Adding a Custom Sink](#adding-a-custom-sink)
+- [API Reference](#api-reference)
+- [Support](#support)
+- [Contributing](#contributing)
+- [Documentation](#documentation)
+- [License](#license)
 
 ## Key Features
-* Automated connection handling (connection, disconnection and reconnection)
-* Message queuing to handle any network instability
-* Authentication management (login and automatic token refreshing)
-* Easy interface to send different types of messages
-* Per-message callbacks for notification of successful message sending
-* Extensibility options for more specific needs
 
-## Getting Started
-Before you start integrating the SDK, ensure you have a Stella Now account.
+- **Automated Connection Handling**: Manages connection, disconnection, and reconnection with exponential backoff.
+- **Message Queuing**: Implements a FIFO queue to handle network instability, with support for custom queue strategies.
+- **Authentication Management**: Supports OIDC authentication with automatic token refreshing.
+- **Flexible Message Sending**: Allows sending various message types wrapped in `StellaNowMessageWrapper`.
+- **Per-Message Callbacks**: Notifies of successful message acknowledgment via `OnMessageAck`.
+- **Extensibility**: Supports custom sinks, queue strategies, and authentication mechanisms.
+
+## Prerequisites
+
+- A StellaNow account with access to the Operators Console for configuration.
+- Node.js (v14.x or later) and npm installed.
+- Environment variables set (see [Configuration](#configuration)).
 
 ## Installation
-You can install the StellaNow SDK using npm:
 
-__ Coming Soon __
+The StellaNow SDK is available via npm. To install it, run the following command in your project directory:
 
-
-## Configuration
-The SDK supports multiple authentication strategies when connecting to the Stella Now MQTT Sink. You can configure the SDK using OIDC authentication or No authentication, depending on your environment.
-
-### Setting Up StellaNow SDK
-To use the SDK, first, ensure you have set the necessary environment variables:
-* API_KEY
-* API_SECRET
-* ORGANIZATION_ID
-* PROJECT_ID
-
-* Then, register the SDK with the appropriate authentication strategy.
-
-### Using OIDC Authentication
-
-To authenticate with `StellaNow's` OIDC (OpenID Connect), use `AddStellaNowSdkWithMqttAndOidcAuth`:
-
-```typescript
-
-const stellaProjectInfo = ProjectInfoFromEnv();
-const stellaCredentials = CredentialsFromEnv();
-const stellaEnvConfig = EnvConfig.saasProd();
-
-const stellaAuthService = new StellaNowAuthenticationService(
-  logger,
-  stellaEnvConfig,
-  stellaProjectInfo,
-  stellaCredentials,
-);
-
-var stellaMQttSink = new StellaNowMqttSink(
-  stellaCredentials,
-  stellaProjectInfo,
-  stellaEnvConfig,
-  stellaAuthService,
-  logger,
-);
-
+```bash
+npm install stellanow-sdk
 ```
 
-This will:
-* Authenticate with OIDC using the provided username and password, using a specific OIDC Client designed for data ingestion.
-* Resulting token will be used in MQTT broker authentication with specific claim.
-* Connect to the MQTT sink securely.
+## Configuration
 
+The SDK supports OIDC authentication via `OidcMqttAuthStrategy` and integrates with an MQTT sink. Configuration is managed through environment variables and provided objects.
 
-## Sample Application
-Here is a simple application that uses StellaNowSDK to send user login messages to the Stella Now platform.
+### Setting Up StellaNow SDK
 
-This function is the main entry point for our demonstration.
-The `RunAsync` function does a few things:
+Set the following environment variables before initializing the SDK:
 
-* It establishes a connection to StellaNow.
-* It creates 2 different messages and sends them using the StellaNow SDK.
+- `OIDC_USERNAME`: Your API key for authentication.
+- `OIDC_PASSWORD`: Your API secret for authentication.
+- `ORGANIZATION_ID`: The unique identifier for your organization.
+- `PROJECT_ID`: The unique identifier for your project.
+
+Then, initialize the SDK with the appropriate configuration. 
 
 ```typescript
-import { UserDetailsMessage } from "./messages/UserDetailsMessage.js";
-import { PhoneNumberModel } from "./messages/models/PhoneNumber.js";
-
 import {
-  ProjectInfoFromEnv,
-  CredentialsFromEnv,
+  ProjectInfo,
+  Credentials,
   DefaultLogger,
   EnvConfig,
   FifoQueue,
-  StellaNowAuthenticationService,
-  StellaNowJsonMessage,
-  StellaNowSDK,
   StellaNowMqttSink,
-} from "stella-sdk-typescript";
-
-const stellaProjectInfo = ProjectInfoFromEnv();
-const stellaCredentials = CredentialsFromEnv();
-const stellaEnvConfig = EnvConfig.saasProd();
-
-console.log(stellaEnvConfig.apiBaseUrl);
-console.log(stellaEnvConfig.brokerUrl);
+  StellaNowSDK,
+  OidcMqttAuthStrategy,
+} from 'stella-now-sdk';
 
 const logger = new DefaultLogger();
+const projectInfo = ProjectInfo.createFromEnv();
+const credentials = Credentials.createFromEnv();
+const envConfig = EnvConfig.saasProd();
 
-const stellaAuthService = new StellaNowAuthenticationService(
-  logger,
-  stellaEnvConfig,
-  stellaProjectInfo,
-  stellaCredentials,
-);
-
-var stellaMQttSink = new StellaNowMqttSink(
-  stellaCredentials,
-  stellaProjectInfo,
-  stellaEnvConfig,
-  stellaAuthService,
-  logger,
-);
-
-var stellaSDK = new StellaNowSDK(
-  stellaProjectInfo,
-  stellaMQttSink,
-  new FifoQueue(),
-  logger,
-);
-
-console.log("Starting service up");
-
-stellaSDK.OnError.subscribe((err) => {
-  console.log("Error with stella service: " + err);
-});
-
-stellaSDK.OnDisconnected.subscribe(() => {
-  console.log("Stella service disconnected");
-});
-
-stellaSDK.OnConnected.subscribe(() => {
-  console.log("Stella Service connected");
-
-  var userDetailsMessage = new UserDetailsMessage(
-    "e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8",
-    "d7db42f0-13ab-4c89-a7c8-fae73691d3ed",
-    new PhoneNumberModel(44, 753594),
-  );
-
-  var jsonMessage = new StellaNowJsonMessage(
-    "e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8",
-    "d7db42f0-13ab-4c89-a7c8-fae73691d3ed",
-    '{"game_id": 123}',
-  );
-
-  stellaSDK.SendMessage(userDetailsMessage);
-  stellaSDK.SendMessage(jsonMessage);
-});
-
-stellaSDK.Start();
-
-
+const authStrategy = new OidcMqttAuthStrategy(logger, envConfig, projectInfo, credentials);
+const mqttSink = new StellaNowMqttSink(logger, authStrategy, projectInfo, envConfig);
+const sdk = new StellaNowSDK(projectInfo, mqttSink, new FifoQueue(), logger);
 ```
 
-This is the callback function that gets called when a message is successfully sent.
-The `OnMessageSentAction` function logs the information that a message was sent successfully, along with the message's ID.
+Above is more verbose initialisation of the SDK, where developer has full control over how the SDK is configured.
 
-```csharp
-private void OnMessageSentAction(StellaNowEventWrapper message)
-{
-    _logger.LogInformation(
-        "Send Confirmation: {MessagesId}",
-        message.Value.Metadata.MessageId
-    );
-}
-```
+### Using OIDC Authentication
 
-The full code for sample applications can be found here: 
-
-* [Basic Application](StellaNowDemo/src/main.ts)
-
-### IMPORTANT
-
-## Message Formatting
-Messages in StellaNowSDK are wrapped in a `StellaNowMessageWrapper` and each specific message type extends this class to define its own properties. Each message needs to follow a certain format, including a type, list of entities, and optional fields. Here is an example:
+The SDK uses `OidcMqttAuthStrategy` for OIDC authentication, handling token retrieval and refreshing automatically.
 
 ```typescript
-class UserLoginMessage extends StellaNowMessageBase implements ToJSON {
+import {
+  OidcMqttAuthStrategy,
+  StellaNowMqttSink,
+  StellaNowSDK,
+  ProjectInfo,
+  Credentials,
+  EnvConfig,
+  DefaultLogger,
+  FifoQueue,
+} from 'stella-now-sdk';
+
+const logger = new DefaultLogger();
+const projectInfo = ProjectInfo.createFromEnv();
+const credentials = Credentials.createFromEnv();
+const envConfig = EnvConfig.saasProd();
+
+const authStrategy = new OidcMqttAuthStrategy(logger, envConfig, projectInfo, credentials);
+const mqttSink = new StellaNowMqttSink(logger, authStrategy, projectInfo, envConfig);
+const sdk = new StellaNowSDK(projectInfo, mqttSink, new FifoQueue(), logger);
+
+await sdk.start();
+```
+
+This configuration:
+- Authenticates with OIDC using the provided `OIDC_USERNAME` and `OIDC_PASSWORD`.
+- Uses the resulting access token for MQTT broker authentication.
+- Establishes a secure connection to the MQTT sink.
+
+## Usage
+
+### Sample Application
+
+Below is a sample application demonstrating how to use the StellaNowSDK to send `UserDetailsMessage` periodically, with a mechanism to stop sending via Enter key.
+Here we can see how the SDK can be provisioned using factory methods for convenience.
+
+```typescript
+import {
+  DefaultLogger,
+  StellaNowSDK,
+} from 'stellanow-sdk';
+
+import { PhoneNumberModel } from './messages/models/PhoneNumber.ts';
+import { UserDetailsMessage } from './messages/UserDetailsMessage.ts';
+
+
+async function main(): Promise<void> {
+  const logger = new DefaultLogger();
+  let stellaSDK: StellaNowSDK;
+  try {
+    stellaSDK = await StellaNowSDK.createWithMqttAndOidc(logger);
+  } catch (err) {
+    logger.error('Failed to create StellaNowSDK:', String(err));
+    process.exit(1); // or handle error appropriately
+  }
+
+  logger.info('Starting service up');
+
+  stellaSDK.OnError.subscribe(err => {
+    logger.info('Error with stella service:', err);
+  });
+
+  stellaSDK.OnDisconnected.subscribe(() => {
+    logger.info('Stella service disconnected');
+  });
+
+  stellaSDK.OnConnected.subscribe(() => {
+    logger.info('Stella service connected');
+  });
+
+  try {
+    await stellaSDK.start();
+    logger.info('StellaNowSDK started successfully');
+
+    // Start sending messages every 1 second
+    const intervalId = setInterval(() => {
+      const userDetailsMessage = new UserDetailsMessage(
+              'e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8',
+              'd7db42f0-13ab-4c89-a7c8-fae73691d3ed',
+              new PhoneNumberModel(44, 753594)
+      );
+
+      stellaSDK.sendMessage(userDetailsMessage);
+      logger.info(`Enqueued messages at ${new Date().toISOString()}`);
+    }, 1000);
+
+    // Stop sending messages when Enter key is pressed
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (key: string) => {
+      // Assert key as string since encoding is utf8
+      if (key === '\n' || key === '\r') {
+        clearInterval(intervalId);
+        logger.info('Stopped sending messages. Press Ctrl+C to exit.');
+      }
+    });
+
+    process.stdin.resume();
+  } catch (err) {
+    logger.error('Failed to start StellaNowSDK:', String(err));
+    process.exit(1); // Exit on failure
+  }
+
+  // Keep the process running until manually stopped
+}
+
+main().catch(err => {
+  const logger = new DefaultLogger();
+
+  logger.error('Main process failed:', String(err));
+  process.exit(1);
+});
+```
+
+This example:
+- Sets up the SDK with OIDC authentication using `OidcMqttAuthStrategy`.
+- Sends `UserDetailsMessage` every second when connected.
+- Stops sending on Enter key press, with error and disconnection handling.
+
+### Message Formatting
+
+Messages in StellaNowSDK are wrapped in `StellaNowMessageWrapper`. Each message type extends `StellaNowMessageBase` and implements the `ToJSON` interface. Examples include:
+
+- **UserDetailsMessage**:
+```typescript
+import { StellaNowMessageBase, Converters, EntityType, ToJSON } from 'stella-now-sdk';
+import { PhoneNumberModel } from './models/PhoneNumber';
+
+export class UserDetailsMessage extends StellaNowMessageBase implements ToJSON {
   constructor(
     public readonly patron_id: string,
     public readonly user_id: string,
-    public readonly timestamp: string,
-    public readonly user_group_id: string,
+    public readonly phone_number: PhoneNumberModel
   ) {
-    super("user_login", [new EntityType("patron_id", patron_id)]);
+    super('user_details', [new EntityType('patron', patron_id)]);
   }
 
-  public toJSON(): any {
+  public toJSON(): object {
     return {
-      user_id: Convertors.Convert(this.user_id),
-      timestamp: Convertors.Convert(this.timestamp),
-      user_group_id: Convertors.Convert(this.user_group_id),
-
+      user_id: Converters.convert(this.user_id),
+      phone_number: Converters.convert(this.phone_number),
       ...super.toJSON(),
     };
   }
 }
-
 ```
 
-Creating these classes by hand can be prone to errors. Therefore, we provide a command line interface (CLI) tool, **StellaNow CLI**, to automate this task. This tool generates the code for the message classes automatically based on the configuration defined in the Operators Console.
+Messages support nested data structures by implementing Models, as seen below:
+- **PhoneNumberModel**:
+```typescript
+import { Converters, ToJSON } from 'stellanow-sdk';
 
-You can install **StellaNow CLI** tool using pip, which is a package installer for Python. It is hosted on Python Package Index (PyPI), a repository of software for the Python programming language. To install it, open your terminal and run the following command:
+export class PhoneNumberModel implements ToJSON {
+  constructor(
+    public readonly country_code: number,
+    public readonly number: number
+  ) {}
+
+  public toJSON(): object {
+    return {
+      country_code: Converters.convert(this.country_code),
+      number: Converters.convert(this.number),
+    };
+  }
+}
+```
+
+To avoid manual errors, use the **StellaNow CLI** tool to generate message classes based on the Operators Console configuration. Install it with:
 
 ```bash
 pip install stellanow-cli
 ```
 
-Once you have installed the **StellaNow CLI** tool, you can use it to generate message classes. Detailed instructions on how to use the **StellaNow CLI** tool can be found in the tool's documentation.
+Follow the [StellaNow CLI](https://pypi.org/project/stellanow-cli/) for detailed instructions. Manually writing message classes is discouraged to ensure alignment with the platform’s schema.
 
-Please note that it is discouraged to write these classes yourself. Using the CLI tool ensures that the message format aligns with the configuration defined in the Operators Console and reduces the potential for errors.
+### Logging
+
+The SDK comes with a `DefaultLogger` class that uses standard console output for logging purposes. 
+The developer is encouraged to provide its own implementation of the `ILogger`, where they can choose how to consume log messages from the SDK.
+
+Below you can see the implementation of the interface and a sample logger:
+
+```typescript
+export interface ILogger {
+  debug(message: string, ...meta: unknown[]): void;
+  info(message: string, ...meta: unknown[]): void;
+  warn(message: string, ...meta: unknown[]): void;
+  error(message: string, ...meta: unknown[]): void;
+}
+
+export class DefaultLogger implements ILogger {
+  debug(message: string, ...meta: unknown[]): void {
+    const timestamp: string = formatTimestamp(new Date());
+    // eslint-disable-next-line no-console
+    console.debug(`[${timestamp}] DEBUG: ${message}`, ...meta);
+  }
+
+  info(message: string, ...meta: unknown[]): void {
+    const timestamp: string = formatTimestamp(new Date());
+    // eslint-disable-next-line no-console
+    console.info(`[${timestamp}] INFO: ${message}`, ...meta);
+  }
+
+  warn(message: string, ...meta: unknown[]): void {
+    const timestamp: string = formatTimestamp(new Date());
+    // eslint-disable-next-line no-console
+    console.warn(`[${timestamp}] WARN: ${message}`, ...meta);
+  }
+
+  error(message: string, ...meta: unknown[]): void {
+    const timestamp: string = formatTimestamp(new Date());
+    // eslint-disable-next-line no-console
+    console.error(`[${timestamp}] ERROR: ${message}`, ...meta);
+  }
+}
+
+```
 
 ## Customization
 
-StellaNowSDK provides extensive flexibility for developers to adapt the SDK to their specific needs. You can extend key components, including message queuing strategies, sinks (where messages are sent), connection strategies, and authentication mechanisms.
+StellaNowSDK offers flexibility to adapt to specific needs.
 
 ### Customizing the Message Queue Strategy
-By default, `StellaNowSDK` uses an in-memory queue to temporarily hold messages before sending them to a sink. These non-persistent queues will lose all messages if the application terminates unexpectedly.
 
-If your application requires a persistent queue that survives restarts or crashes, you can implement a custom queue strategy by extending `IMessageQueueStrategy` and integrating it with a database, file system, or distributed queue.
+By default, `StellaNowSDK` uses an in-memory `FifoQueue`. For persistence across restarts, implement a custom queue by extending `IStellaNowMessageSource`.
 
-#### Using a Custom Queue Strategy
+```typescript
+import type { IStellaNowMessageSource } from 'stella-now-sdk';
 
-The demo uses an in memory FIFO queue, but you can instantiate and pass the StellaSDK
-any class implementing the IStellaNowMessageQueue interface.
+class PersistentQueue implements IStellaNowMessageSource {
+  // Implement queue methods with persistence logic
+  enqueue(event: StellaNowEventWrapper): boolean { /* ... */ }
+  // ... other methods
+}
 
->⚠️ **Performance Considerations:** Persistent queues introduce additional latency and require careful design to balance reliability and performance.
+const sdk = new StellaNowSDK(projectInfo, mqttSink, new PersistentQueue(), logger);
+```
 
-#### Adding a Custom Sink
-A sink is where messages are ultimately delivered. StellaNowSDK supports MQTT-based sinks, but you can extend this to support Kafka, Webhooks, Databases, or any custom integration.
+> **Performance Considerations**: Persistent queues add latency; design them to balance reliability and performance.
+
+### Adding a Custom Sink
+
+The SDK supports MQTT via `StellaNowMqttSink`, but you can create custom sinks by implementing `IStellaNowSink`.
+
+```typescript
+import type { IStellaNowSink } from 'stella-now-sdk';
+
+class CustomSink implements IStellaNowSink {
+  readonly IsConnected: boolean = false;
+  OnConnected: StellaNowSignal<() => void> = new StellaNowSignal();
+  // ... other properties and methods
+}
+
+const customSink = new CustomSink();
+const sdk = new StellaNowSDK(projectInfo, customSink, new FifoQueue(), logger);
+```
+
+## API Reference
+
+- **[Types](https://github.com/stella-systems/stellanow-sdk-typescript/blob/master/src/lib/types/index.ts)**: Includes `ILogger`, `StellaNowCredentials`, `StellaNowEnvironmentConfig`, `StellaNowProjectInfo`.
+- **[Default Logger](https://github.com/stella-systems/stellanow-sdk-typescript/blob/master/src/lib/core/default-logger.ts)**: `DefaultLogger`.
+- **[Messages](https://github.com/stella-systems/stellanow-sdk-typescript/blob/master/src/lib/core/messages.ts)**: `StellaNowMessageWrapper`, `EntityType`.
+- **[Events](https://github.com/stella-systems/stellanow-sdk-typescript/blob/master/src/lib/core/events.ts)**: `StellaNowEventWrapper`, `EventKey`.
+- **[Sinks](https://github.com/stella-systems/stellanow-sdk-typescript/blob/master/src/lib/sinks/mqtt/mqtt-sink.ts)**: `StellaNowMqttSink`
+- **[SDK](https://github.com/stella-systems/stellanow-sdk-typescript/blob/master/src/lib/stella-now-sdk.ts)**: `StellaNowSDK`, with methods `start`, `stop`, `sendMessage`.
+
+Detailed JSDoc is available in the source code.
 
 ## Support
-For any issues or feature requests, feel free to create a new issue on our GitHub repository. If you need further assistance, contact our support team at help@stella.systems.
+
+For issues or feature requests, create a new issue on our [GitHub repository](https://github.com/stella-systems/stellanow-sdk-typescript/issues). For further assistance, contact our support team at [help@stella.systems](mailto:help@stella.systems).
+
+## Contributing
+
+We welcome contributions! Please fork the repository, create a feature branch, and submit a pull request.
 
 ## Documentation
-Detailed documentation will be available soon.
+
+Detailed API documentation will be available **soon** at [docs.stella.cloud](https://docs.stella.cloud). 
+
+> **For now, refer to the inline JSDoc and this README.**
 
 ## License
-This project is licensed under the terms of the MIT license.
+
+This project is licensed under the MIT License.
