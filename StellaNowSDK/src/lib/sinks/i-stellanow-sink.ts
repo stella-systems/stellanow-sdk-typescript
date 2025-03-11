@@ -23,6 +23,10 @@ import type { StellaNowSignal } from '../core/stellanow-signal.ts';
 
 /**
  * Interface for sinks that handle message publishing to external brokers.
+ * @remarks Defines a contract for implementing sinks that manage connections to external brokers
+ * (e.g., MQTT) and publish messages. Implementations should handle initialization, connection
+ * lifecycle, and message sending, throwing specific exceptions for initialization issues,
+ * operational failures, or broker-specific errors.
  */
 interface IStellaNowSink {
     /**
@@ -41,44 +45,59 @@ interface IStellaNowSink {
     OnDisconnected: StellaNowSignal<() => void>;
 
     /**
-     * Event triggered when broker acknowledges receipt of the event
-     * @param eventId Unique identifier of the event (aka message_id)
+     * Event triggered when broker acknowledges receipt of the event.
+     * @param eventId Unique identifier of the event (aka message_id).
      */
     OnMessageAck: StellaNowSignal<(eventId: string) => void>;
 
     /**
      * Event triggered when an error occurs in the sink.
-     * @param message The error message.
+     * @param message The error message describing the issue.
      */
     OnError: StellaNowSignal<(message: string) => void>;
 
     /**
      * Starts the sink, initiating the connection to the broker.
-     * @throws {Error} If the sink is already started or in an invalid state.
+     * @returns A promise that resolves when the sink is successfully started.
+     * @throws {SinkInitializationError} If the sink is already started or encounters an invalid state
+     * during initialization (e.g., missing configuration).
+     * @example
+     * await sink.start();
      */
     start(): Promise<void>;
 
     /**
      * Stops the sink, terminating the connection to the broker.
-     * @throws {Error} If the sink is not started or has been disposed.
+     * @returns A promise that resolves when the sink is successfully stopped.
+     * @throws {SinkOperationError} If the sink is not started, has been disposed, or encounters
+     * an error during shutdown.
+     * @example
+     * await sink.stop();
      */
     stop(): Promise<void>;
 
     /**
      * Sends a message to the broker asynchronously.
      * @param event The event wrapper containing the message to send.
-     * @throws {Error} If the sink is not connected or an error occurs during sending.
+     * @returns A promise that resolves when the message is successfully sent.
+     * @throws {MqttConnectionException} If the sink is not connected to the broker or encounters
+     * an MQTT-specific connection issue.
+     * @throws {SinkOperationError} If the event is null or an unexpected error occurs during sending.
+     * @example
+     * await sink.sendMessageAsync(myEvent);
      */
     sendMessageAsync(event: StellaNowEventWrapper): Promise<void>;
 
-    // /**
-    //  * Cleans up resources used by the sink, including disconnecting from the MQTT broker
-    //  * and stopping the connection monitor.
-    //  * @remarks This method should be called manually when the sink is no longer needed.
-    //  * @example
-    //  * sink.dispose();
-    //  */
-    // dispose(): void;
+    /**
+     * Cleans up resources used by the sink, including disconnecting from the broker
+     * and stopping the connection monitor.
+     * @remarks This method should be called manually when the sink is no longer needed
+     * to free up resources and prevent memory leaks.
+     * @throws {SinkOperationError} If an error occurs during resource cleanup (e.g., failed disconnection).
+     * @example
+     * sink.dispose();
+     */
+    dispose(): void;
 }
 
 export { IStellaNowSink };

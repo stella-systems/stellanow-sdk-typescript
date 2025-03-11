@@ -99,3 +99,93 @@ export class UnknownTypeError extends StellaNowError {
         this.name = 'UnknownTypeError';
     }
 }
+
+/**
+ * Error thrown when an OIDC authentication process fails.
+ * @remarks Includes details about the authentication failure for debugging.
+ */
+export class OidcAuthenticationError extends StellaNowError {
+    constructor(message: string, cause?: unknown) {
+        super(`OIDC authentication failed: ${message}`, 'OIDC_AUTHENTICATION_ERROR');
+        this.name = 'OidcAuthenticationError';
+        this.cause = cause;
+    }
+
+    /**
+     * The underlying cause of the authentication failure, if any.
+     * @type {unknown}
+     */
+    public readonly cause?: unknown;
+}
+
+/**
+ * Error thrown when retrieving or processing the OpenID Connect discovery document fails.
+ * @remarks Includes details about the discovery document failure for debugging.
+ */
+export class DiscoveryDocumentError extends StellaNowError {
+    constructor(message: string, cause?: unknown) {
+        super(`Discovery document error: ${message}`, 'DISCOVERY_DOCUMENT_ERROR');
+        this.name = 'DiscoveryDocumentError';
+        this.cause = cause;
+    }
+
+    /**
+     * The underlying cause of the discovery document failure, if any.
+     * @type {unknown}
+     */
+    public readonly cause?: unknown;
+}
+
+/**
+ * Error thrown when validating an OIDC token response fails.
+ * @remarks Includes details about the token validation failure for debugging.
+ */
+export class TokenValidationError extends StellaNowError {
+    constructor(message: string, cause?: unknown) {
+        super(`Token validation failed: ${message}`, 'TOKEN_VALIDATION_ERROR');
+        this.name = 'TokenValidationError';
+        this.cause = cause;
+    }
+
+    /**
+     * The underlying cause of the token validation failure, if any.
+     * @type {unknown}
+     */
+    public readonly cause?: unknown;
+}
+
+/**
+ * Error thrown when initializing a sink fails.
+ * @remarks Includes details about the initialization failure, such as invalid parameters or state issues.
+ */
+export class SinkInitializationError extends StellaNowError {
+    constructor(message: string, cause?: unknown) {
+        super(`Sink initialization failed: ${message}`, 'SINK_INITIALIZATION_ERROR');
+        this.name = 'SinkInitializationError';
+        this.cause = cause;
+    }
+
+    /**
+     * The underlying cause of the initialization failure, if any.
+     * @type {unknown}
+     */
+    public readonly cause?: unknown;
+}
+
+/**
+ * Error thrown when an operation on a sink fails.
+ * @remarks Includes details about the operation failure, such as publishing or stopping issues.
+ */
+export class SinkOperationError extends StellaNowError {
+    constructor(message: string, cause?: unknown) {
+        super(`Sink operation failed: ${message}`, 'SINK_OPERATION_ERROR');
+        this.name = 'SinkOperationError';
+        this.cause = cause;
+    }
+
+    /**
+     * The underlying cause of the operation failure, if any.
+     * @type {unknown}
+     */
+    public readonly cause?: unknown;
+}

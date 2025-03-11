@@ -32,6 +32,12 @@ import {
 } from 'openid-client';
 
 import type { IMqttAuthStrategy } from './i-mqtt-auth-strategy.js';
+import {
+    OidcAuthenticationError,
+    DiscoveryDocumentError,
+    TokenValidationError,
+    InvalidArgumentError
+} from '../../../core/exceptions.ts';
 import { getErrorMessage } from '../../../core/utilities.ts';
 import type {
     StellaNowEnvironmentConfig,
@@ -67,7 +73,7 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
      * @param envConfig The environment configuration containing authority details.
      * @param projectInfo The project information including organization and project IDs.
      * @param credentials The credentials for OIDC authentication.
-     * @throws {Error} If any parameter is null or invalid.
+     * @throws {InvalidArgumentError} If any parameter is null or invalid.
      */
     constructor(
         logger: ILogger,
@@ -76,7 +82,7 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
         credentials: StellaNowCredentials
     ) {
         if (!logger || !envConfig || !projectInfo || !credentials) {
-            throw new Error('All constructor parameters must be non-null');
+            throw new InvalidArgumentError('constructor parameters', 'All constructor parameters must be non-null');
         }
         this.logger = logger;
         this.envConfig = envConfig;
@@ -88,11 +94,11 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
     /**
      * Reconnects the existing MQTT client if it is disconnected.
      * @returns A promise that resolves when the client is reconnected.
-     * @throws {Error} If reconnection fails.
+     * @throws {OidcAuthenticationError} If authentication or reconnection fails.
      */
     public async auth(mqttClient: ExtendedMqttClient): Promise<void> {
         if (!mqttClient) {
-            throw new Error('No MQTT client available to reconnect');
+            throw new OidcAuthenticationError('No MQTT client available to reconnect');
         }
 
         if (mqttClient.connected) {
@@ -102,7 +108,7 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
         await this.authenticate(); // Re-authenticate to get a new token if needed
         const accessToken = this.getAccessToken();
         if (!accessToken) {
-            throw new Error('No valid access token available for reconnection');
+            throw new OidcAuthenticationError('No valid access token available for reconnection');
         }
 
         const clientId: string = this.credentials.sinkClientId ? this.credentials.sinkClientId : `StellaNowSdkTS-${nanoid(10)}`;
@@ -118,7 +124,7 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
     /**
      * Attempts to authenticate using OIDC, refreshing tokens if possible, or performing a new login.
      * @returns {Promise<void>} Resolves when authentication is complete.
-     * @throws {Error} If authentication fails.
+     * @throws {OidcAuthenticationError} If authentication fails.
      */
     private async authenticate(): Promise<void> {
         if (!(await this.refreshTokensAsync())) {
@@ -130,21 +136,21 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
      * Validates the token response and throws an error if invalid.
      * @param response The token response to validate, which can be null.
      * @returns {void}
-     * @throws {Error} If the response is null or contains an error.
+     * @throws {TokenValidationError} If the response is null or contains an error.
      */
     private validateTokenResponse(response: TokenSet | null): void {
         if (!response || response.error) {
             const errorMessage = getErrorMessage(response?.error);
             this.logger.error(`Failed to authenticate: ${errorMessage}`);
             this.tokenResponse = null;
-            throw new Error('Failed to authenticate.');
+            throw new TokenValidationError(`Invalid token response: ${errorMessage}`, response?.error);
         }
     }
 
     /**
      * Retrieves the discovery document configuration, caching the result.
      * @returns {Promise<DiscoveryConfig>} The discovery document configuration.
-     * @throws {Error} If the discovery document cannot be retrieved.
+     * @throws {DiscoveryDocumentError} If the discovery document cannot be retrieved.
      */
     private async getDiscoveryDocumentResponse(): Promise<DiscoveryConfig> {
         if (this.configInstance) {
@@ -163,14 +169,14 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
         } catch (err: unknown) {
             this.logger.error(`Error retrieving discovery document: ${getErrorMessage(err)}`);
             this.configInstance = null;
-            throw new Error('Could not retrieve discovery document');
+            throw new DiscoveryDocumentError('Could not retrieve discovery document', err);
         }
     }
 
     /**
      * Performs a new OIDC login using the password grant type.
      * @returns {Promise<void>} Resolves when login is complete.
-     * @throws {Error} If the login fails.
+     * @throws {OidcAuthenticationError} If the login fails.
      */
     private async loginAsync(): Promise<void> {
         this.logger.info('Attempting to authenticate');
@@ -193,14 +199,14 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
             this.logger.info('Authentication successful');
         } catch (err: unknown) {
             this.logger.error(`Authentication error: ${getErrorMessage(err)}`);
-            throw err;
+            throw new OidcAuthenticationError('Login failed', err);
         }
     }
 
     /**
      * Attempts to refresh the existing access token.
      * @returns {Promise<boolean>} True if the refresh was successful, false otherwise.
-     * @throws {Error} If an unexpected error occurs during refresh.
+     * @throws {OidcAuthenticationError} If an unexpected error occurs during refresh.
      */
     private async refreshTokensAsync(): Promise<boolean> {
         this.logger.info('Attempting token refresh');
@@ -227,7 +233,7 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
             return true;
         } catch (err: unknown) {
             this.logger.error(`Token refresh error: ${getErrorMessage(err)}`);
-            return false;
+            throw new OidcAuthenticationError('Token refresh failed', err);
         }
     }
 
@@ -238,8 +244,6 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
     private getAccessToken(): string | undefined {
         return this.tokenResponse?.access_token;
     }
-
-
 }
 
 export { OidcMqttAuthStrategy };

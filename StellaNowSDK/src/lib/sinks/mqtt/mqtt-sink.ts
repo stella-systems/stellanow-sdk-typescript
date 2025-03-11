@@ -24,6 +24,10 @@ import mqtt from 'mqtt';
 
 import type { IMqttAuthStrategy } from './auth-strategies/i-mqtt-auth-strategy.ts';
 import type { StellaNowEventWrapper } from '../../core/events.ts';
+import {
+    SinkInitializationError,
+    SinkOperationError
+} from '../../core/exceptions.ts';
 import { StellaNowSignal } from '../../core/stellanow-signal.ts';
 import type {
     StellaNowEnvironmentConfig,
@@ -63,7 +67,7 @@ class StellaNowMqttSink implements IStellaNowSink {
      * @param authStrategy The authentication strategy for MQTT connections.
      * @param stellaNowConfig The configuration containing organization and project IDs.
      * @param envConfig The environment configuration with broker details.
-     * @throws {Error} If any parameter is null or invalid.
+     * @throws {SinkInitializationError} If any parameter is null or invalid, or if the broker URL is invalid.
      */
     constructor(
         private logger: ILogger,
@@ -72,14 +76,14 @@ class StellaNowMqttSink implements IStellaNowSink {
         private envConfig: StellaNowEnvironmentConfig,
     ) {
         if (!logger || !authStrategy || !stellaNowConfig || !envConfig || !stellaNowConfig.organizationId || !envConfig.brokerUrl) {
-            throw new Error('Invalid constructor parameters');
+            throw new SinkInitializationError('Invalid constructor parameters');
         }
 
         // Validate broker URL
         try {
             new URL(envConfig.brokerUrl);
         } catch {
-            throw new Error('Broker URL is not a valid URI: ${envConfig.brokerUrl}');
+            throw new SinkInitializationError(`Broker URL is not a valid URI: ${envConfig.brokerUrl}`);
         }
     }
 
@@ -125,11 +129,11 @@ class StellaNowMqttSink implements IStellaNowSink {
         const release = await this.mutex.acquire();
         try {
             if (this.connectionMonitorTask) {
-                throw new Error('Sink is already started');
+                throw new SinkInitializationError('Sink is already started');
             }
 
             if (!this.mqttClient) {
-                this.mqttClient =  mqtt.connect(this.envConfig.brokerUrl, {
+                this.mqttClient = mqtt.connect(this.envConfig.brokerUrl, {
                     username: '',   // Will be populated in the auth strategy
                     password: '',   // Will be populated in the auth strategy
                     clean: true,
@@ -145,7 +149,7 @@ class StellaNowMqttSink implements IStellaNowSink {
             this.connectionMonitorTask = this.startConnectionMonitor(this.cancellationToken);
         } catch (err) {
             this.logger.error(`Failed to start MQTT sink: ${String(err)}`);
-            throw err;
+            throw new SinkInitializationError(`Failed to start: ${String(err)}`, err);
         } finally {
             release();
         }
@@ -157,7 +161,7 @@ class StellaNowMqttSink implements IStellaNowSink {
             await this.disconnectAsync();
         } catch (err) {
             this.logger.error(`Failed to stop MQTT sink: ${String(err)}`);
-            throw err;
+            throw new SinkOperationError(`Failed to stop: ${String(err)}`, err);
         } finally {
             release();
         }
@@ -166,7 +170,7 @@ class StellaNowMqttSink implements IStellaNowSink {
     public async sendMessageAsync(event: StellaNowEventWrapper): Promise<void> {
         const release = await this.mutex.acquire();
         try {
-            if (!event) throw new Error('Event cannot be null');
+            if (!event) throw new SinkOperationError('Event cannot be null');
             if (!this.IsConnected) {
                 throw new MqttConnectionException('Cannot publish message: Sink is not connected', this.envConfig.brokerUrl);
             }
@@ -176,7 +180,7 @@ class StellaNowMqttSink implements IStellaNowSink {
             this.logger.debug(`Message with ID ${event.value.metadata.messageId} published successfully`);
         } catch (err) {
             this.logger.error(`Failed to publish message: ${String(err)}`);
-            throw err;
+            throw new SinkOperationError(`Failed to publish: ${String(err)}`, err);
         } finally {
             release();
         }
@@ -230,7 +234,7 @@ class StellaNowMqttSink implements IStellaNowSink {
             this.cancellationToken = null;
         } catch (err) {
             this.logger.error(`Failed to disconnect from MQTT broker at ${this.envConfig.brokerUrl}: ${String(err)}`);
-            throw new Error('Failed to disconnect from the MQTT broker');
+            throw new SinkOperationError('Failed to disconnect from the MQTT broker', err);
         }
     }
 
@@ -266,7 +270,7 @@ class StellaNowMqttSink implements IStellaNowSink {
         const client = this.mqttClient; // Local variable to avoid null issues in callbacks
         return new Promise<void>((resolve, reject) => {
             if (client === null) {
-                reject(new Error('MQTT client is null'));
+                reject(new MqttConnectionException('MQTT client is null'));
                 return;
             }
 
@@ -279,7 +283,7 @@ class StellaNowMqttSink implements IStellaNowSink {
             const onError = (err: Error): void => {
                 client.off('connect', onConnect);
                 client.off('error', onError);
-                reject(err);
+                reject(new MqttConnectionException(err.message));
             };
 
             client.on('connect', onConnect);
@@ -321,7 +325,7 @@ class StellaNowMqttSink implements IStellaNowSink {
             }
         } catch (err) {
             this.logger.error(`Unexpected error in connection monitor: ${String(err)}`);
-            throw err;
+            throw new SinkOperationError('Unexpected error in connection monitor', err);
         } finally {
             this.logger.info('Connection monitor cancelled');
         }
