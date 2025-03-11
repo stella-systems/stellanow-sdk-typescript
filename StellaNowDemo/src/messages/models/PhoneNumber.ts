@@ -1,4 +1,4 @@
-import type { ToJSON} from 'stella-sdk-typescript';
+import type { ToJSON } from 'stella-sdk-typescript';
 import { Converters } from 'stella-sdk-typescript';
 
 export class PhoneNumberModel implements ToJSON {

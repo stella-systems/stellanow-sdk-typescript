@@ -189,3 +189,70 @@ export class SinkOperationError extends StellaNowError {
      */
     public readonly cause?: unknown;
 }
+
+/**
+ * A custom exception class for MQTT connection-related errors.
+ * @remarks This exception is thrown when issues occur during MQTT connection attempts, disconnections,
+ * or operations within the StellaNow MQTT sink. It includes an optional broker URL for additional context.
+ * Extends the native `Error` class to maintain compatibility with standard error handling.
+ */
+export class MqttConnectionException extends Error {
+    /**
+     * Creates a new instance of MqttConnectionException.
+     * @param message - The error message describing the connection issue.
+     * @param brokerUrl - The URL of the MQTT broker involved (optional), included in the error message for debugging.
+     * @example
+     * throw new MqttConnectionException('Failed to connect', 'wss://broker.example.com');
+     * // Output: "Failed to connect (Broker: wss://broker.example.com)"
+     * @example
+     * throw new MqttConnectionException('Connection lost');
+     * // Output: "Connection lost"
+     */
+    constructor(message: string, brokerUrl?: string) {
+        super(`${message}${brokerUrl ? ` (Broker: ${brokerUrl})` : ''}`);
+        this.name = 'MqttConnectionException';
+    }
+}
+
+/**
+ * Error thrown when a UUID is invalid.
+ * @remarks Includes the name of the invalid UUID argument for better debugging.
+ */
+export class InvalidUuidError extends StellaNowError {
+    /**
+     * Creates a new instance of InvalidUuidError.
+     * @param argumentName - The name of the invalid UUID argument.
+     * @param value - The invalid UUID value (optional, for context).
+     */
+    constructor(argumentName: string, value?: string) {
+        super(
+            `Invalid UUID for argument '${argumentName}': ${value || 'value does not match UUID format'}`,
+            'INVALID_UUID'
+        );
+        this.name = 'InvalidUuidError';
+        this.argumentName = argumentName;
+        this.value = value;
+    }
+
+    /**
+     * The name of the invalid UUID argument.
+     * @type {string}
+     */
+    public readonly argumentName: string;
+
+    /**
+     * The invalid UUID value, if provided.
+     * @type {string | undefined}
+     */
+    public readonly value?: string;
+}
+
+export class SdkCreationError extends StellaNowError {
+    constructor(message: string, cause?: unknown) {
+        super(`SDK creation failed: ${message}`, 'SDK_CREATION_ERROR');
+        this.name = 'SdkCreationError';
+        this.cause = cause;
+    }
+
+    public readonly cause?: unknown;
+}

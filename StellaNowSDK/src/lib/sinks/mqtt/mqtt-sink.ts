@@ -25,6 +25,7 @@ import mqtt from 'mqtt';
 import type { IMqttAuthStrategy } from './auth-strategies/i-mqtt-auth-strategy.ts';
 import type { StellaNowEventWrapper } from '../../core/events.ts';
 import {
+    MqttConnectionException,
     SinkInitializationError,
     SinkOperationError
 } from '../../core/exceptions.ts';
@@ -34,13 +35,6 @@ import type {
     ILogger
 } from '../../types/index.ts';
 import type { IStellaNowSink } from '../i-stellanow-sink.ts';
-
-class MqttConnectionException extends Error {
-    constructor(message: string, brokerUrl?: string) {
-        super(`${message}${brokerUrl ? ` (Broker: ${brokerUrl})` : ''}`);
-        this.name = 'MqttConnectionException';
-    }
-}
 
 /**
  * An MQTT-based sink for StellaNow messages, handling connection, disconnection,
@@ -127,11 +121,13 @@ class StellaNowMqttSink implements IStellaNowSink {
 
     public async start(): Promise<void> {
         const release = await this.mutex.acquire();
-        try {
-            if (this.connectionMonitorTask) {
-                throw new SinkInitializationError('Sink is already started');
-            }
+        if (this.connectionMonitorTask) {
+            release();
+            this.logger.error('Failed to start MQTT sink: Sink is already started');
+            throw new SinkInitializationError('Sink is already started');
+        }
 
+        try {
             if (!this.mqttClient) {
                 this.mqttClient = mqtt.connect(this.envConfig.brokerUrl, {
                     username: '',   // Will be populated in the auth strategy
@@ -143,13 +139,11 @@ class StellaNowMqttSink implements IStellaNowSink {
                 this.setupEventHandlers();
             }
 
-            // Initialize the cancellation token
             this.cancellationToken = { isCancelled: false };
-            // Start the connection monitor with the cancellation token
             this.connectionMonitorTask = this.startConnectionMonitor(this.cancellationToken);
         } catch (err) {
             this.logger.error(`Failed to start MQTT sink: ${String(err)}`);
-            throw new SinkInitializationError(`Failed to start: ${String(err)}`, err);
+            throw err;
         } finally {
             release();
         }
@@ -169,18 +163,24 @@ class StellaNowMqttSink implements IStellaNowSink {
 
     public async sendMessageAsync(event: StellaNowEventWrapper): Promise<void> {
         const release = await this.mutex.acquire();
-        try {
-            if (!event) throw new SinkOperationError('Event cannot be null');
-            if (!this.IsConnected) {
-                throw new MqttConnectionException('Cannot publish message: Sink is not connected', this.envConfig.brokerUrl);
-            }
+        if (!event) {
+            release();
+            this.logger.error('Failed to publish message: Event cannot be null');
+            throw new SinkOperationError('Event cannot be null');
+        }
+        if (!this.IsConnected) {
+            release();
+            this.logger.error('Failed to publish message: Sink is not connected');
+            throw new MqttConnectionException('Cannot publish message: Sink is not connected', this.envConfig.brokerUrl);
+        }
 
+        try {
             this.logger.debug(`Publishing message with ID: ${event.value.metadata.messageId}`);
             await this.publish(event);
             this.logger.debug(`Message with ID ${event.value.metadata.messageId} published successfully`);
         } catch (err) {
             this.logger.error(`Failed to publish message: ${String(err)}`);
-            throw new SinkOperationError(`Failed to publish: ${String(err)}`, err);
+            throw err;
         } finally {
             release();
         }
@@ -244,6 +244,7 @@ class StellaNowMqttSink implements IStellaNowSink {
                 reject(new MqttConnectionException('No MQTT client available', this.envConfig.brokerUrl));
                 return;
             }
+
             this.mqttClient.publish(
                 this.getTopic(),
                 JSON.stringify(event),
@@ -336,4 +337,4 @@ class StellaNowMqttSink implements IStellaNowSink {
     }
 }
 
-export { StellaNowMqttSink, MqttConnectionException };
+export { StellaNowMqttSink };

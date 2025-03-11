@@ -18,18 +18,9 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import type {
-    StellaNowProjectInfo,
-    StellaNowCredentials} from 'stella-sdk-typescript';
 import {
-    ProjectInfo,
-    Credentials,
     DefaultLogger,
-    EnvConfig,
     StellaNowSDK,
-    StellaNowMqttSink,
-    FifoQueue,
-    OidcMqttAuthStrategy,
 } from 'stella-sdk-typescript';
 
 import { PhoneNumberModel } from './messages/models/PhoneNumber.ts';
@@ -37,36 +28,14 @@ import { UserDetailsMessage } from './messages/UserDetailsMessage.ts';
 
 
 async function main(): Promise<void> {
-    const stellaProjectInfo: StellaNowProjectInfo = ProjectInfo.createFromEnv();
-    const stellaCredentials: StellaNowCredentials = Credentials.createFromEnv();
-    const stellaEnvConfig = EnvConfig.saasProd();
-
     const logger = new DefaultLogger();
-
-    logger.info('API Base URL:', stellaEnvConfig.apiBaseUrl);
-    logger.info('Broker URL:', stellaEnvConfig.brokerUrl);
-
-    // Instantiate OidcMqttAuthStrategy directly
-    const authStrategy = new OidcMqttAuthStrategy(
-        logger,
-        stellaEnvConfig,
-        stellaProjectInfo,
-        stellaCredentials
-    );
-
-    const stellaMqttSink = new StellaNowMqttSink(
-        logger,
-        authStrategy,
-        stellaProjectInfo,
-        stellaEnvConfig
-    );
-
-    const stellaSDK = new StellaNowSDK(
-        stellaProjectInfo,
-        stellaMqttSink,
-        new FifoQueue(),
-        logger
-    );
+    let stellaSDK: StellaNowSDK;
+    try {
+        stellaSDK = await StellaNowSDK.createWithMqttAndOidc(logger);
+    } catch (err) {
+        logger.error('Failed to create StellaNowSDK:', String(err));
+        process.exit(1); // or handle error appropriately
+    }
 
     logger.info('Starting service up');
 

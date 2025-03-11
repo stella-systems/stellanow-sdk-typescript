@@ -18,10 +18,9 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+import { DEFAULT_OIDC_CLIENT_ID, OIDC_CREDENTIALS_ENV_VARS, SINK_ENV_VARS } from './constants.ts';
 import { InvalidArgumentError, MissingEnvVariableError } from '../core/exceptions.ts';
 import { readEnv } from '../core/utilities.ts';
-
-const DEFAULT_OIDC_CLIENT_ID: string = 'event-ingestor';
 
 /**
  * Interface representing credentials for authenticating with the StellaNow system.
@@ -69,17 +68,17 @@ export const Credentials = {
      * const credentials = Credentials.createFromEnv();
      */
     createFromEnv(): StellaNowCredentials {
-        const apiKey = readEnv('OIDC_USERNAME');
-        const apiSecret = readEnv('OIDC_PASSWORD');
-        const sinkClientId = readEnv('SINK_CLIENT_ID');
-        const oidcClient = readEnv('OIDC_CLIENT', DEFAULT_OIDC_CLIENT_ID);
+        const apiKey = readEnv(OIDC_CREDENTIALS_ENV_VARS.USERNAME);
+        const apiSecret = readEnv(OIDC_CREDENTIALS_ENV_VARS.PASSWORD);
+        const sinkClientId = readEnv(SINK_ENV_VARS.SINK_CLIENT_ID);
+        const oidcClient = readEnv(OIDC_CREDENTIALS_ENV_VARS.CLIENT, DEFAULT_OIDC_CLIENT_ID);
 
         // Validate environment variables before calling create
         if (!apiKey) {
-            throw new MissingEnvVariableError('OIDC_USERNAME');
+            throw new MissingEnvVariableError(OIDC_CREDENTIALS_ENV_VARS.USERNAME);
         }
         if (!apiSecret) {
-            throw new MissingEnvVariableError('OIDC_PASSWORD');
+            throw new MissingEnvVariableError(OIDC_CREDENTIALS_ENV_VARS.PASSWORD);
         }
 
         return create(apiKey, apiSecret, sinkClientId, oidcClient);

@@ -18,8 +18,9 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import { InvalidArgumentError, MissingEnvVariableError } from '../core/exceptions.ts';
-import { readEnv } from '../core/utilities.ts';
+import { PROJECT_INFO_ENV_VARS } from './constants.ts';
+import { InvalidUuidError, MissingEnvVariableError } from '../core/exceptions.ts';
+import {isUuid, readEnv} from '../core/utilities.ts';
 
 /**
  * Interface representing project information for the StellaNow system.
@@ -46,11 +47,11 @@ export const ProjectInfo = {
      */
     create(organizationId: string, projectId: string): StellaNowProjectInfo {
         // Validate required arguments
-        if (!organizationId) {
-            throw new InvalidArgumentError('organizationId', 'cannot be empty');
+        if (!isUuid(organizationId)) {
+            throw new InvalidUuidError(PROJECT_INFO_ENV_VARS.ORGANIZATION_ID, organizationId);
         }
-        if (!projectId) {
-            throw new InvalidArgumentError('projectId', 'cannot be empty');
+        if (!isUuid(projectId)) {
+            throw new InvalidUuidError(PROJECT_INFO_ENV_VARS.PROJECT_ID, projectId);
         }
 
         return { organizationId, projectId };
@@ -64,15 +65,15 @@ export const ProjectInfo = {
      * const projectInfo = ProjectInfo.createFromEnv();
      */
     createFromEnv(): StellaNowProjectInfo {
-        const organizationId = readEnv('ORGANIZATION_ID');
-        const projectId = readEnv('PROJECT_ID');
+        const organizationId = readEnv(PROJECT_INFO_ENV_VARS.ORGANIZATION_ID);
+        const projectId = readEnv(PROJECT_INFO_ENV_VARS.PROJECT_ID);
 
         // Validate environment variables
         if (!organizationId) {
-            throw new MissingEnvVariableError('ORGANIZATION_ID');
+            throw new MissingEnvVariableError(PROJECT_INFO_ENV_VARS.ORGANIZATION_ID);
         }
         if (!projectId) {
-            throw new MissingEnvVariableError('PROJECT_ID');
+            throw new MissingEnvVariableError(PROJECT_INFO_ENV_VARS.PROJECT_ID);
         }
 
         return ProjectInfo.create(organizationId, projectId);

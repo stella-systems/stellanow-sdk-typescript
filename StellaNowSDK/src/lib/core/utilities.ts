@@ -33,11 +33,6 @@ function readEnv(
 ): string {
     const value = process.env[name] || missing;
     if (value === undefined) {
-        // TODO: Should use some logger that has been passed in
-        // eslint-disable-next-line no-console
-        console.error(
-            'Cannot find the requested environment variable: ' + name
-        );
         return '';
     }
     return value;
@@ -55,4 +50,9 @@ function getErrorMessage(err: unknown): string {
     return String(err) || 'Unknown error';
 }
 
-export { readEnv, getErrorMessage};
+function isUuid(val: string): boolean {
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    return uuidRegex.test(val);
+}
+
+export { getErrorMessage, isUuid, readEnv };

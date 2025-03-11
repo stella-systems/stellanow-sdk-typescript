@@ -65,16 +65,7 @@ function isToJson(obj: unknown): obj is ToJSON {
  * console.log(formatDateToIso8601(date)); // "2025-02-18T11:09:44.650000Z"
  */
 function formatDateToIso8601(date: Date): string {
-    const pad = (num: number, size: number): string => num.toString().padStart(size, '0');
-    const year = date.getUTCFullYear();
-    const month = pad(date.getUTCMonth() + 1, 2);
-    const day = pad(date.getUTCDate(), 2);
-    const hours = pad(date.getUTCHours(), 2);
-    const minutes = pad(date.getUTCMinutes(), 2);
-    const seconds = pad(date.getUTCSeconds(), 2);
-    const milliseconds = pad(date.getUTCMilliseconds(), 3);
-    const microseconds = milliseconds + '000'; // Pad to simulate microseconds
-    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${microseconds}Z`;
+    return date.toISOString().replace('Z', '000Z');
 }
 
 /**

@@ -19,12 +19,25 @@
 // IN THE SOFTWARE.
 
 import { StellaNowEventWrapper } from './core/events.ts';
-import type { IStellaNowMessageSource } from './core/message-source.ts';
+import { SdkCreationError } from './core/exceptions.ts';
+import type { IStellaNowMessageSource} from './core/message-source.ts';
+import { FifoQueue } from './core/message-source.ts';
 import type { StellaNowMessageBase } from './core/messages.ts';
 import { StellaNowMessageWrapper } from './core/messages.ts';
 import type { StellaNowSignal } from './core/stellanow-signal.ts';
 import type { IStellaNowSink } from './sinks/i-stellanow-sink.ts';
-import type { StellaNowProjectInfo, ILogger } from './types/index.ts';
+import {OidcMqttAuthStrategy} from './sinks/mqtt/auth-strategies/oidc-mqtt-auth-strategy.ts';
+import {StellaNowMqttSink} from './sinks/mqtt/mqtt-sink.ts';
+import type {
+    StellaNowProjectInfo,
+    ILogger,
+    StellaNowCredentials, StellaNowEnvironmentConfig
+} from './types/index.ts';
+import {
+    EnvConfig,
+    Credentials,
+    ProjectInfo
+} from './types/index.ts';
 
 /**
  * The main SDK class for managing message sending and receiving in the StellaNow system.
@@ -180,6 +193,53 @@ class StellaNowSDK {
             }
         }
     }
+
+    /**
+     * Creates a configured instance of StellaNowSDK with MQTT and OIDC authentication.
+     * @remarks This factory method simplifies SDK setup by retrieving environment-based configurations,
+     * setting up OIDC authentication via `OidcMqttAuthStrategy`, and initializing an MQTT sink with
+     * `StellaNowMqttSink`. It uses a default in-memory `FifoQueue` for message queuing unless a custom
+     * message source is provided. The method handles exceptions for invalid or missing configurations.
+     * @param logger - The logger instance to use for logging events and errors (required).
+     * @param projectInfo - The project information (defaults to environment-based configuration via `ProjectInfo.createFromEnv()`).
+     * @param credentials - The credentials for OIDC authentication (defaults to environment-based configuration via `Credentials.createFromEnv()`).
+     * @param envConfig - The environment configuration (defaults to SaaS production settings via `EnvConfig.saasProd()`).
+     * @param messageSource - The message source for queuing events (defaults to a new `FifoQueue` instance).
+     * @returns {Promise<StellaNowSDK>} A configured StellaNowSDK instance ready for use.
+     * @throws {MissingEnvVariableError} If required environment variables (API_KEY, API_SECRET, ORGANIZATION_ID, PROJECT_ID) are not set.
+     * @throws {InvalidUuidError} If ORGANIZATION_ID or PROJECT_ID environment variables are not valid UUIDs.
+     * @throws {InvalidArgumentError} If any required parameter (e.g., logger) is null or invalid.
+     * @throws {SinkInitializationError} If the MQTT sink initialization fails due to invalid parameters or state.
+     * @throws {OidcAuthenticationError} If OIDC authentication fails during setup.
+     * @example
+     * const sdk = await StellaNowSDK.createWithMqttAndOidc(new DefaultLogger());
+     * await sdk.start();
+     * @example
+     * const customLogger = new CustomLogger();
+     * const customProjectInfo = ProjectInfo.create('550e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440001');
+     * const sdk = await StellaNowSDK.createWithMqttAndOidc(customLogger, customProjectInfo);
+     */
+    public static async createWithMqttAndOidc(
+        logger: ILogger,
+        projectInfo: StellaNowProjectInfo = ProjectInfo.createFromEnv(),
+        credentials: StellaNowCredentials = Credentials.createFromEnv(),
+        envConfig: StellaNowEnvironmentConfig = EnvConfig.saasProd(),
+        messageSource: IStellaNowMessageSource = new FifoQueue()
+    ): Promise<StellaNowSDK> {
+        try {
+            logger.info('Creating StellaNowSDK instance with MQTT and OIDC authentication');
+            const authStrategy = new OidcMqttAuthStrategy(logger, envConfig, projectInfo, credentials);
+            const mqttSink = new StellaNowMqttSink(logger, authStrategy, projectInfo, envConfig);
+            const sdk = new StellaNowSDK(projectInfo, mqttSink, messageSource, logger);
+
+            return Promise.resolve(sdk);
+        } catch (err: unknown) {
+            logger.error('Failed to create StellaNowSDK:', String(err));
+            return Promise.reject(new SdkCreationError(String(err), err));
+        }
+    }
 }
+
+
 
 export { StellaNowSDK };
