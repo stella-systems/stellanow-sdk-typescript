@@ -1,30 +1,3 @@
-Thank you for providing the demo app code! I apologize for the inaccuracies in the previous README sample application. Upon reviewing the provided `main.ts` and related message files (`PhoneNumberModel.ts`, `UserLoginMessage.ts`, `UserDetailsMessage.ts`), I can see several discrepancies between the README's sample and the actual implementation. Let’s correct these issues by aligning the README's sample application and usage examples with the working demo app. I’ll also ensure consistency with the SDK’s current structure, including the use of `OidcMqttAuthStrategy` directly (as shown in your demo) and the updated message classes.
-
-### Identified Issues in the Previous README Sample
-
-1. **Authentication Service Misalignment**:
-  - The README used `StellaNowAuthenticationService`, but your demo app uses `OidcMqttAuthStrategy` directly within `StellaNowMqttSink`. There’s no `StellaNowAuthenticationService` in the provided SDK code, suggesting it might be outdated or misnamed.
-
-2. **Method Name Case**:
-  - The README used `SendMessage`, but the demo uses `sendMessage` (camelCase, consistent with TypeScript conventions).
-
-3. **Message Class Usage**:
-  - The README included a `UserLoginMessage` example, but the demo uses `UserDetailsMessage`. The `UserLoginMessage` in the README didn’t match the demo’s structure.
-  - The README referenced `StellaNowJsonMessage`, which has been removed from the SDK.
-
-4. **Callback Handling**:
-  - The README didn’t include the demo’s interval-based message sending or stdin-based stopping mechanism.
-
-5. **Logger Usage**:
-  - The README’s logger usage was inconsistent; the demo uses `logger.info` and `logger.error` directly.
-
-6. **Imports and Module Structure**:
-  - The README’s imports didn’t fully match the demo’s structure (e.g., missing `EntityType` in some contexts).
-
-### Updated README
-
-I’ll update the README to reflect the demo app, correcting the sample application and usage examples. I’ll assume `StellaNowAuthenticationService` was a typo or outdated concept, and use `OidcMqttAuthStrategy` as shown. Here’s the revised README:
-
 # StellaNowSDK
 
 ## Introduction
@@ -75,8 +48,6 @@ The StellaNow SDK is available via npm. To install it, run the following command
 npm install stellanow-sdk
 ```
 
-> **Note**: If the package is not yet published, this is a placeholder. Check the [GitHub repository](https://github.com/stella-tech/stella-now-sdk) for the latest release status or build from source using `npm install` in the repository.
-
 ## Configuration
 
 The SDK supports OIDC authentication via `OidcMqttAuthStrategy` and integrates with an MQTT sink. Configuration is managed through environment variables and provided objects.
@@ -90,7 +61,7 @@ Set the following environment variables before initializing the SDK:
 - `ORGANIZATION_ID`: The unique identifier for your organization.
 - `PROJECT_ID`: The unique identifier for your project.
 
-Then, initialize the SDK with the appropriate configuration:
+Then, initialize the SDK with the appropriate configuration. 
 
 ```typescript
 import {
@@ -113,6 +84,8 @@ const authStrategy = new OidcMqttAuthStrategy(logger, envConfig, projectInfo, cr
 const mqttSink = new StellaNowMqttSink(logger, authStrategy, projectInfo, envConfig);
 const sdk = new StellaNowSDK(projectInfo, mqttSink, new FifoQueue(), logger);
 ```
+
+Above is more verbose initialisation of the SDK, where developer has full control over how the SDK is configured.
 
 ### Using OIDC Authentication
 
@@ -143,7 +116,7 @@ await sdk.start();
 ```
 
 This configuration:
-- Authenticates with OIDC using the provided `API_KEY` and `API_SECRET`.
+- Authenticates with OIDC using the provided `OIDC_USERNAME` and `OIDC_PASSWORD`.
 - Uses the resulting access token for MQTT broker authentication.
 - Establishes a secure connection to the MQTT sink.
 
@@ -152,57 +125,62 @@ This configuration:
 ### Sample Application
 
 Below is a sample application demonstrating how to use the StellaNowSDK to send `UserDetailsMessage` periodically, with a mechanism to stop sending via Enter key.
+Here we can see how the SDK can be provisioned using factory methods for convenience.
 
 ```typescript
 import {
-  ProjectInfo,
-  Credentials,
-  EnvConfig,
   DefaultLogger,
-  FifoQueue,
-  StellaNowMqttSink,
   StellaNowSDK,
-  OidcMqttAuthStrategy,
-  EntityType,
-} from 'stella-now-sdk';
-import { PhoneNumberModel } from './messages/models/PhoneNumber';
-import { UserDetailsMessage } from './messages/UserDetailsMessage';
+} from 'stellanow-sdk';
+
+import { PhoneNumberModel } from './messages/models/PhoneNumber.ts';
+import { UserDetailsMessage } from './messages/UserDetailsMessage.ts';
+
 
 async function main(): Promise<void> {
   const logger = new DefaultLogger();
-  const projectInfo = ProjectInfo.createFromEnv();
-  const credentials = Credentials.createFromEnv();
-  const envConfig = EnvConfig.saasProd();
-
-  logger.info('API Base URL:', envConfig.apiBaseUrl);
-  logger.info('Broker URL:', envConfig.brokerUrl);
-
-  const authStrategy = new OidcMqttAuthStrategy(logger, envConfig, projectInfo, credentials);
-  const mqttSink = new StellaNowMqttSink(logger, authStrategy, projectInfo, envConfig);
-  const sdk = new StellaNowSDK(projectInfo, mqttSink, new FifoQueue(), logger);
+  let stellaSDK: StellaNowSDK;
+  try {
+    stellaSDK = await StellaNowSDK.createWithMqttAndOidc(logger);
+  } catch (err) {
+    logger.error('Failed to create StellaNowSDK:', String(err));
+    process.exit(1); // or handle error appropriately
+  }
 
   logger.info('Starting service up');
 
-  sdk.OnError.subscribe((err) => logger.error('Error with Stella service:', err));
-  sdk.OnDisconnected.subscribe(() => logger.info('Stella service disconnected'));
-  sdk.OnConnected.subscribe(() => logger.info('Stella service connected'));
+  stellaSDK.OnError.subscribe(err => {
+    logger.info('Error with stella service:', err);
+  });
+
+  stellaSDK.OnDisconnected.subscribe(() => {
+    logger.info('Stella service disconnected');
+  });
+
+  stellaSDK.OnConnected.subscribe(() => {
+    logger.info('Stella service connected');
+  });
 
   try {
-    await sdk.start();
+    await stellaSDK.start();
     logger.info('StellaNowSDK started successfully');
 
+    // Start sending messages every 1 second
     const intervalId = setInterval(() => {
       const userDetailsMessage = new UserDetailsMessage(
-        'e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8',
-        'd7db42f0-13ab-4c89-a7c8-fae73691d3ed',
-        new PhoneNumberModel(44, 753594)
+              'e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8',
+              'd7db42f0-13ab-4c89-a7c8-fae73691d3ed',
+              new PhoneNumberModel(44, 753594)
       );
-      sdk.sendMessage(userDetailsMessage);
-      logger.info(`Enqueued message at ${new Date().toISOString()}`);
+
+      stellaSDK.sendMessage(userDetailsMessage);
+      logger.info(`Enqueued messages at ${new Date().toISOString()}`);
     }, 1000);
 
+    // Stop sending messages when Enter key is pressed
     process.stdin.setEncoding('utf8');
-    process.stdin.on('data', (key) => {
+    process.stdin.on('data', (key: string) => {
+      // Assert key as string since encoding is utf8
       if (key === '\n' || key === '\r') {
         clearInterval(intervalId);
         logger.info('Stopped sending messages. Press Ctrl+C to exit.');
@@ -212,12 +190,15 @@ async function main(): Promise<void> {
     process.stdin.resume();
   } catch (err) {
     logger.error('Failed to start StellaNowSDK:', String(err));
-    process.exit(1);
+    process.exit(1); // Exit on failure
   }
+
+  // Keep the process running until manually stopped
 }
 
-main().catch((err) => {
+main().catch(err => {
   const logger = new DefaultLogger();
+
   logger.error('Main process failed:', String(err));
   process.exit(1);
 });
@@ -231,25 +212,6 @@ This example:
 ### Message Formatting
 
 Messages in StellaNowSDK are wrapped in `StellaNowMessageWrapper`. Each message type extends `StellaNowMessageBase` and implements the `ToJSON` interface. Examples include:
-
-- **PhoneNumberModel**:
-```typescript
-import { Converters, ToJSON } from 'stella-now-sdk';
-
-export class PhoneNumberModel implements ToJSON {
-  constructor(
-    public readonly country_code: number,
-    public readonly number: number
-  ) {}
-
-  public toJSON(): object {
-    return {
-      country_code: Converters.convert(this.country_code),
-      number: Converters.convert(this.number),
-    };
-  }
-}
-```
 
 - **UserDetailsMessage**:
 ```typescript
@@ -275,13 +237,76 @@ export class UserDetailsMessage extends StellaNowMessageBase implements ToJSON {
 }
 ```
 
+Messages support nested data structures by implementing Models, as seen below:
+- **PhoneNumberModel**:
+```typescript
+import { Converters, ToJSON } from 'stellanow-sdk';
+
+export class PhoneNumberModel implements ToJSON {
+  constructor(
+    public readonly country_code: number,
+    public readonly number: number
+  ) {}
+
+  public toJSON(): object {
+    return {
+      country_code: Converters.convert(this.country_code),
+      number: Converters.convert(this.number),
+    };
+  }
+}
+```
+
 To avoid manual errors, use the **StellaNow CLI** tool to generate message classes based on the Operators Console configuration. Install it with:
 
 ```bash
 pip install stellanow-cli
 ```
 
-Follow the [StellaNow CLI documentation](https://github.com/stella-tech/stella-now-cli) for detailed instructions. Manually writing message classes is discouraged to ensure alignment with the platform’s schema.
+Follow the [StellaNow CLI](https://pypi.org/project/stellanow-cli/) for detailed instructions. Manually writing message classes is discouraged to ensure alignment with the platform’s schema.
+
+### Logging
+
+The SDK comes with a `DefaultLogger` class that uses standard console output for logging purposes. 
+The developer is encouraged to provide its own implementation of the `ILogger`, where they can choose how to consume log messages from the SDK.
+
+Below you can see the implementation of the interface and a sample logger:
+
+```typescript
+export interface ILogger {
+  debug(message: string, ...meta: unknown[]): void;
+  info(message: string, ...meta: unknown[]): void;
+  warn(message: string, ...meta: unknown[]): void;
+  error(message: string, ...meta: unknown[]): void;
+}
+
+export class DefaultLogger implements ILogger {
+  debug(message: string, ...meta: unknown[]): void {
+    const timestamp: string = formatTimestamp(new Date());
+    // eslint-disable-next-line no-console
+    console.debug(`[${timestamp}] DEBUG: ${message}`, ...meta);
+  }
+
+  info(message: string, ...meta: unknown[]): void {
+    const timestamp: string = formatTimestamp(new Date());
+    // eslint-disable-next-line no-console
+    console.info(`[${timestamp}] INFO: ${message}`, ...meta);
+  }
+
+  warn(message: string, ...meta: unknown[]): void {
+    const timestamp: string = formatTimestamp(new Date());
+    // eslint-disable-next-line no-console
+    console.warn(`[${timestamp}] WARN: ${message}`, ...meta);
+  }
+
+  error(message: string, ...meta: unknown[]): void {
+    const timestamp: string = formatTimestamp(new Date());
+    // eslint-disable-next-line no-console
+    console.error(`[${timestamp}] ERROR: ${message}`, ...meta);
+  }
+}
+
+```
 
 ## Customization
 
@@ -324,25 +349,28 @@ const sdk = new StellaNowSDK(projectInfo, customSink, new FifoQueue(), logger);
 
 ## API Reference
 
-- **[Types](https://github.com/stella-tech/stella-now-sdk/blob/main/src/lib/types/index.ts)**: Includes `ILogger`, `StellaNowCredentials`, `StellaNowEnvironmentConfig`, `StellaNowProjectInfo`.
-- **[Core](https://github.com/stella-tech/stella-now-sdk/blob/main/src/lib/core/messages.ts)**: `StellaNowMessageWrapper`, `EntityType`, `Converters`.
-- **[Events](https://github.com/stella-tech/stella-now-sdk/blob/main/src/lib/core/events.ts)**: `StellaNowEventWrapper`, `EventKey`.
-- **[Sinks](https://github.com/stella-tech/stella-now-sdk/blob/main/src/lib/sinks/mqtt/mqtt-sink.ts)**: `StellaNowMqttSink`, with exceptions like `MqttConnectionException`, `SinkInitializationError`, `SinkOperationError`.
-- **[SDK](https://github.com/stella-tech/stella-now-sdk/blob/main/src/lib/stella-now-sdk.ts)**: `StellaNowSDK`, with methods `start`, `stop`, `sendMessage`.
+- **[Types](https://github.com/stella-systems/stellanow-sdk-typescript/blob/master/src/lib/types/index.ts)**: Includes `ILogger`, `StellaNowCredentials`, `StellaNowEnvironmentConfig`, `StellaNowProjectInfo`.
+- **[Default Logger](https://github.com/stella-systems/stellanow-sdk-typescript/blob/master/src/lib/core/default-logger.ts)**: `DefaultLogger`.
+- **[Messages](https://github.com/stella-systems/stellanow-sdk-typescript/blob/master/src/lib/core/messages.ts)**: `StellaNowMessageWrapper`, `EntityType`.
+- **[Events](https://github.com/stella-systems/stellanow-sdk-typescript/blob/master/src/lib/core/events.ts)**: `StellaNowEventWrapper`, `EventKey`.
+- **[Sinks](https://github.com/stella-systems/stellanow-sdk-typescript/blob/master/src/lib/sinks/mqtt/mqtt-sink.ts)**: `StellaNowMqttSink`
+- **[SDK](https://github.com/stella-systems/stellanow-sdk-typescript/blob/master/src/lib/stella-now-sdk.ts)**: `StellaNowSDK`, with methods `start`, `stop`, `sendMessage`.
 
 Detailed JSDoc is available in the source code.
 
 ## Support
 
-For issues or feature requests, create a new issue on our [GitHub repository](https://github.com/stella-tech/stella-now-sdk). For further assistance, contact our support team at [help@stella.systems](mailto:help@stella.systems).
+For issues or feature requests, create a new issue on our [GitHub repository](https://github.com/stella-systems/stellanow-sdk-typescript/issues). For further assistance, contact our support team at [help@stella.systems](mailto:help@stella.systems).
 
 ## Contributing
 
-We welcome contributions! Please fork the repository, create a feature branch, and submit a pull request. Follow the [Contributing Guidelines](https://github.com/stella-tech/stella-now-sdk/blob/main/CONTRIBUTING.md) (to be created) for details.
+We welcome contributions! Please fork the repository, create a feature branch, and submit a pull request.
 
 ## Documentation
 
-Detailed API documentation will be available soon at [docs.stella.cloud](https://docs.stella.cloud). For now, refer to the inline JSDoc and this README.
+Detailed API documentation will be available **soon** at [docs.stella.cloud](https://docs.stella.cloud). 
+
+> **For now, refer to the inline JSDoc and this README.**
 
 ## License
 

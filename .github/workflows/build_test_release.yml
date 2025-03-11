@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - stable-prep
 
 jobs:
   build-and-publish:
