@@ -1,6 +1,6 @@
 {
   "name": "stella-sdk-typescript",
-  "version": "0.0.1",
+  "version": "0.0.1-rc4",
   "author": "Stella Technologies (UK) Limited",
   "license": "MIT",
   "main": "dist/index.js",
