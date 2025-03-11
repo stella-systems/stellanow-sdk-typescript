@@ -20,7 +20,7 @@
 
 import type { ILogger } from '../types/index.ts';
 
-const utcFormatter = new Intl.DateTimeFormat('en-GB', {
+const utcFormatter = new Intl.DateTimeFormat('sv-SE', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
