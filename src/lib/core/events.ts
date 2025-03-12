@@ -32,11 +32,13 @@ class EventKey implements ToJSON {
      * @param organizationId - The unique identifier for the organization.
      * @param projectId - The unique identifier for the project within the organization.
      * @param entityId - The unique identifier for the entity associated with the event.
+     * @param eventTypeDefinitionId - The unique identifier for the main entity type associated with the event.
      */
     constructor(
         public organizationId: string,
         public projectId: string,
-        public entityId: string
+        public entityId: string,
+        public eventTypeDefinitionId: string
     ) {}
 
     /**
@@ -48,6 +50,7 @@ class EventKey implements ToJSON {
             organizationId: this.organizationId,
             projectId: this.projectId,
             entityId: this.entityId,
+            eventTypeDefinitionId: this.eventTypeDefinitionId
         };
     }
 }
@@ -105,7 +108,8 @@ class StellaNowEventWrapper implements ToJSON {
             new EventKey(
                 projectInfo.organizationId,
                 projectInfo.projectId,
-                value.metadata.entityTypeIds[0].entityId
+                value.metadata.entityTypeIds[0].entityId,
+                value.metadata.entityTypeIds[0].entityTypeDefinitionId
             ),
             value
         );
