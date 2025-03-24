@@ -23,8 +23,8 @@ import {
     StellaNowSDK,
 } from 'stellanow-sdk';
 
-import { PhoneNumberModel } from './messages/models/PhoneNumber.ts';
-import { UserDetailsMessage } from './messages/UserDetailsMessage.ts';
+import { PhoneNumberModel } from './messages/models/phone-number-model.ts';
+import { UserDetailsMessage } from './messages/user-details-message.ts';
 
 
 async function main(): Promise<void> {
