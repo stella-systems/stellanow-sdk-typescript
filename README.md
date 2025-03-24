@@ -37,7 +37,7 @@ Welcome to the StellaNow TypeScript SDK! This SDK provides an easy-to-use interf
 ## Prerequisites
 
 - A StellaNow account with access to the Operators Console for configuration.
-- Node.js (v14.x or later) and npm installed.
+- Node.js (v18.x or later) and npm installed.
 - Environment variables set (see [Configuration](#configuration)).
 
 ## Installation
@@ -133,7 +133,7 @@ import {
   StellaNowSDK,
 } from 'stellanow-sdk';
 
-import { PhoneNumberModel } from './messages/models/PhoneNumber.ts';
+import { PhoneNumberModel } from './messages/models/PhoneNumberModel.ts';
 import { UserDetailsMessage } from './messages/UserDetailsMessage.ts';
 
 

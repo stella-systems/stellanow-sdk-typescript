@@ -20,7 +20,7 @@
 
 import { PROJECT_INFO_ENV_VARS } from './constants.ts';
 import { InvalidUuidError, MissingEnvVariableError } from '../core/exceptions.ts';
-import {isUuid, readEnv} from '../core/utilities.ts';
+import { isUuid, readEnv } from '../core/utilities.ts';
 
 /**
  * Interface representing project information for the StellaNow system.
