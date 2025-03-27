@@ -19,7 +19,10 @@
 // IN THE SOFTWARE.
 
 import {
+    Credentials,
     DefaultLogger,
+    EnvConfig,
+    ProjectInfo,
     StellaNowSDK,
 } from 'stellanow-sdk';
 
@@ -31,7 +34,11 @@ async function main(): Promise<void> {
     const logger = new DefaultLogger();
     let stellaSDK: StellaNowSDK;
     try {
-        stellaSDK = await StellaNowSDK.createWithMqttAndOidc(logger);
+        stellaSDK = await StellaNowSDK.createWithMqttAndOidc(logger, 
+            ProjectInfo.createFromEnv(),
+        Credentials.createFromEnv(),
+        EnvConfig.saasDev(),
+        );
     } catch (err) {
         logger.error('Failed to create StellaNowSDK:', String(err));
         process.exit(1); // or handle error appropriately

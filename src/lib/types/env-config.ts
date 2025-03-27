@@ -95,6 +95,19 @@ export const EnvConfig = {
         );
     },
 
+        /**
+     * Creates a StellaNowEnvironmentConfig instance for the staging SaaS environment.
+     * @returns {StellaNowEnvironmentConfig} A configuration object for the staging environment.
+     * @example
+     * const stageConfig = EnvConfig.saasStage();
+     */
+        saasDev(): StellaNowEnvironmentConfig {
+            return createEnvConfig(
+                'https://api.dev.stella.cloud',
+                'wss://ingestor.dev.stella.cloud:8083/mqtt'
+            );
+        },
+
     /**
      * Creates a custom StellaNowEnvironmentConfig instance with the specified base and broker URLs.
      * @param baseUrl - The base URL for the API endpoint.
