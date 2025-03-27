@@ -161,28 +161,22 @@ class StellaNowMqttSink implements IStellaNowSink {
         }
     }
 
-    public async sendMessageAsync(event: StellaNowEventWrapper): Promise<void> {
-        const release = await this.mutex.acquire();
+    public sendMessage(event: StellaNowEventWrapper): void {
         if (!event) {
-            release();
             this.logger.error('Failed to publish message: Event cannot be null');
             throw new SinkOperationError('Event cannot be null');
         }
         if (!this.IsConnected) {
-            release();
             this.logger.error('Failed to publish message: Sink is not connected');
             throw new MqttConnectionException('Cannot publish message: Sink is not connected', this.envConfig.brokerUrl);
         }
 
         try {
             this.logger.debug(`Publishing message with ID: ${event.value.metadata.messageId}`);
-            await this.publish(event);
-            this.logger.debug(`Message with ID ${event.value.metadata.messageId} published successfully`);
+            this.publish(event);
         } catch (err) {
             this.logger.error(`Failed to publish message: ${String(err)}`);
             throw err;
-        } finally {
-            release();
         }
     }
 
@@ -238,29 +232,39 @@ class StellaNowMqttSink implements IStellaNowSink {
         }
     }
 
-    private async publish(event: StellaNowEventWrapper): Promise<void> {
-        return new Promise((resolve, reject) => {
-            if (!this.mqttClient) {
-                reject(new MqttConnectionException('No MQTT client available', this.envConfig.brokerUrl));
-                return;
-            }
+    count = 0;
 
-            this.mqttClient.publish(
-                this.getTopic(),
-                JSON.stringify(event),
-                { qos: 1 },
-                (error, packet?: Packet) => {
-                    if (error) {
-                        reject(new MqttConnectionException(error.message, this.envConfig.brokerUrl));
-                    } else {
-                        if (packet && packet.cmd === 'publish' && packet.messageId) {
-                            this.OnMessageAck.trigger(event.value.metadata.messageId);
-                        }
-                        resolve();
+    /*
+    Need to remove the resolve after ack 
+    - How does this bubble up through the API?
+    - What does the user get to know that a specific message was delivered?
+    - How are errors handled? and how are things re-sent if needed?
+    */
+    private publish(event: StellaNowEventWrapper): void {
+        if (!this.mqttClient) {
+            throw new MqttConnectionException('No MQTT client available', this.envConfig.brokerUrl);
+        }
+
+        this.mqttClient.publish(
+            this.getTopic(),
+            JSON.stringify(event),
+            { qos: 1 },
+            (error, packet?: Packet) => {
+                if (error) {
+                    // When we detect an error, we end the connection. This will trigger the connection
+                    // monitor which will then initiate the reconnection logic.
+                    // This is transparent to consumers of this class.
+                    this.logger.warn("MQTT publish error");
+                    this.mqttClient?.end(true);
+                    // TODO: Might need to use this.mqttClient?.reconnect();
+                } else {
+                    if (packet && packet.cmd === 'publish' && packet.messageId) {
+                        this.count++;
+                        this.OnMessageAck.trigger(event.value.metadata.messageId);
                     }
                 }
-            );
-        });
+            }
+        );
     }
 
     private getTopic(): string {

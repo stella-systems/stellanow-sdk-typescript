@@ -71,8 +71,7 @@ async function main(): Promise<void> {
             );
 
             stellaSDK.sendMessage(userDetailsMessage);
-            logger.info(`Enqueued messages at ${new Date().toISOString()}`);
-        }, 1000);
+        }, 1);
 
         // Stop sending messages when Enter key is pressed
         process.stdin.setEncoding('utf8');

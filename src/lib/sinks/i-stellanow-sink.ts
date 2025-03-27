@@ -79,14 +79,8 @@ interface IStellaNowSink {
     /**
      * Sends a message to the broker asynchronously.
      * @param event The event wrapper containing the message to send.
-     * @returns A promise that resolves when the message is successfully sent.
-     * @throws {MqttConnectionException} If the sink is not connected to the broker or encounters
-     * an MQTT-specific connection issue.
-     * @throws {SinkOperationError} If the event is null or an unexpected error occurs during sending.
-     * @example
-     * await sink.sendMessageAsync(myEvent);
      */
-    sendMessageAsync(event: StellaNowEventWrapper): Promise<void>;
+    sendMessage(event: StellaNowEventWrapper): void;
 
     /**
      * Cleans up resources used by the sink, including disconnecting from the broker

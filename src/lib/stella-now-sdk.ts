@@ -93,7 +93,7 @@ class StellaNowSDK {
             this.eventLoop().catch((err) => {
                 this.logger.error(`Event loop failed: ${String(err)}`);
             });
-        }, 2000);
+        }, 10);
     }
 
     /**
@@ -182,14 +182,8 @@ class StellaNowSDK {
             const event = this.source.tryDequeue();
 
             if (event) {
-                try {
-                    this.logger.debug(`Publishing event: ${event.value.metadata.messageId}`);
-                    await this.sink.sendMessageAsync(event);
-                    this.logger.debug(`Event ${event.value.metadata.messageId} published successfully`);
-                } catch (err) {
-                    this.logger.error(`Failed to publish event ${event.value.metadata.messageId}: ${String(err)}`);
-                    this.source.enqueue(event); // Requeue on failure
-                }
+                this.logger.debug(`Publishing event: ${event.value.metadata.messageId}`);
+                this.sink.sendMessage(event);
             }
         }
     }
