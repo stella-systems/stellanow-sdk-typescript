@@ -93,7 +93,7 @@ class StellaNowSDK {
             this.eventLoop().catch((err) => {
                 this.logger.error(`Event loop failed: ${String(err)}`);
             });
-        }, 2000);
+        }, 10);
     }
 
     /**
