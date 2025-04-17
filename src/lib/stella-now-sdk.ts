@@ -76,12 +76,14 @@ class StellaNowSDK {
      * @param sink - The sink implementation for publishing messages to the broker.
      * @param source - The message source for managing the message queue.
      * @param logger - The logger instance for logging events and errors.
+     * @param eventLoopIntervalInMs - Defines how long the thread sleeps between checking if any new messages are available.
      */
     constructor(
         private projectInfo: StellaNowProjectInfo,
         private sink: IStellaNowSink,
         private source: IStellaNowMessageSource,
-        private logger: ILogger
+        private logger: ILogger,
+        private eventLoopIntervalInMs: number = 100
     ) {
         this.OnConnected = sink.OnConnected;
         this.OnDisconnected = sink.OnDisconnected;
@@ -93,7 +95,7 @@ class StellaNowSDK {
             this.eventLoop().catch((err) => {
                 this.logger.error(`Event loop failed: ${String(err)}`);
             });
-        }, 2000);
+        }, eventLoopIntervalInMs);
     }
 
     /**

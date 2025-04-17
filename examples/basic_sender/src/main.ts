@@ -18,17 +18,16 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import {
-    DefaultLogger,
-    StellaNowSDK,
-} from 'stellanow-sdk';
+import { StellaNowSDK } from 'stellanow-sdk';
 
 import { PhoneNumberModel } from './messages/models/phone-number-model.ts';
 import { UserDetailsMessage } from './messages/user-details-message.ts';
+import { UserLoginMessage } from './messages/user-login-message.ts';
+import { PinoLogger } from './pino-logger.ts';
 
 
 async function main(): Promise<void> {
-    const logger = new DefaultLogger();
+    const logger = new PinoLogger();
     let stellaSDK: StellaNowSDK;
     try {
         stellaSDK = await StellaNowSDK.createWithMqttAndOidc(logger);
@@ -55,17 +54,26 @@ async function main(): Promise<void> {
         await stellaSDK.start();
         logger.info('StellaNowSDK started successfully');
 
-        // Start sending messages every 1 second
+        // Start sending two messages every 0.1 second
         const intervalId = setInterval(() => {
-            const userDetailsMessage = new UserDetailsMessage(
-                'e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8',
-                'd7db42f0-13ab-4c89-a7c8-fae73691d3ed',
-                new PhoneNumberModel(44, 753594)
+
+            stellaSDK.sendMessage(
+                new UserLoginMessage(
+                    'e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8',
+                    'e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8',
+                    new Date(Date.now())
+                )
             );
 
-            stellaSDK.sendMessage(userDetailsMessage);
+            stellaSDK.sendMessage(
+                new UserDetailsMessage(
+                    'e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8',
+                    'd7db42f0-13ab-4c89-a7c8-fae73691d3ed',
+                    new PhoneNumberModel(44, 753594)
+                )
+            );
             logger.info(`Enqueued messages at ${new Date().toISOString()}`);
-        }, 1000);
+        }, 100);
 
         // Stop sending messages when Enter key is pressed
         process.stdin.setEncoding('utf8');
@@ -87,7 +95,7 @@ async function main(): Promise<void> {
 }
 
 main().catch(err => {
-    const logger = new DefaultLogger();
+    const logger = new PinoLogger();
 
     logger.error('Main process failed:', String(err));
     process.exit(1);
