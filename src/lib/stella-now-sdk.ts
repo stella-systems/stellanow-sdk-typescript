@@ -18,6 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+import { CancellationToken } from './core/cancellation-token.ts';
 import { StellaNowEventWrapper } from './core/events.ts';
 import { SdkCreationError } from './core/exceptions.ts';
 import type { IStellaNowMessageSource} from './core/message-source.ts';
