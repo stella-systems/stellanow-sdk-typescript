@@ -1,6 +1,6 @@
 {
   "name": "stellanow-sdk",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "author": "Stella Technologies (UK) Limited",
   "license": "MIT",
   "main": "dist/index.js",
@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "async-mutex": "^0.5.0",
-    "mqtt": "^5.10.3",
+    "mqtt": "^5.11.1",
     "nanoid": "^5.1.3",
     "openid-client": "^6.3.3"
   }

@@ -18,7 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import { StellaNowSDK } from 'stellanow-sdk';
+import { FifoQueue, StellaNowSDK, ProjectInfo, Credentials, EnvConfig } from 'stellanow-sdk';
 
 import { PhoneNumberModel } from './messages/models/phone-number-model.ts';
 import { UserDetailsMessage } from './messages/user-details-message.ts';
@@ -30,7 +30,14 @@ async function main(): Promise<void> {
     const logger = new PinoLogger();
     let stellaSDK: StellaNowSDK;
     try {
-        stellaSDK = await StellaNowSDK.createWithMqttAndOidc(logger);
+        stellaSDK = await StellaNowSDK.createWithMqttAndOidc(
+            logger,
+            EnvConfig.saasDev(),
+            new FifoQueue,
+            ProjectInfo.createFromEnv(),
+            Credentials.createFromEnv(),
+            true
+        );
     } catch (err) {
         logger.error('Failed to create StellaNowSDK:', String(err));
         process.exit(1); // or handle error appropriately
@@ -54,6 +61,9 @@ async function main(): Promise<void> {
         await stellaSDK.start();
         logger.info('StellaNowSDK started successfully');
 
+        logger.info('Waiting for service up');
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
         // Start sending two messages every 0.1 second
         const intervalId = setInterval(() => {
 
@@ -72,8 +82,7 @@ async function main(): Promise<void> {
                     new PhoneNumberModel(44, 753594)
                 )
             );
-            logger.info(`Enqueued messages at ${new Date().toISOString()}`);
-        }, 100);
+        }, 1);
 
         // Stop sending messages when Enter key is pressed
         process.stdin.setEncoding('utf8');
