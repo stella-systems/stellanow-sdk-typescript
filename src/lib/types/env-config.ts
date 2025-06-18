@@ -83,15 +83,15 @@ export const EnvConfig = {
     },
 
     /**
-     * Creates a StellaNowEnvironmentConfig instance for the staging SaaS environment.
-     * @returns {StellaNowEnvironmentConfig} A configuration object for the staging environment.
+     * Creates a StellaNowEnvironmentConfig instance for the development SaaS environment.
+     * @returns {StellaNowEnvironmentConfig} A configuration object for the development environment.
      * @example
-     * const stageConfig = EnvConfig.saasStage();
+     * const devConfig = EnvConfig.saasDev();
      */
-    saasStage(): StellaNowEnvironmentConfig {
+    saasDev(): StellaNowEnvironmentConfig {
         return createEnvConfig(
-            'https://api.stage.stella.cloud',
-            'wss://ingestor.stage.stella.cloud:8083/mqtt'
+            'https://api.dev.stella.cloud',
+            'wss://ingestor.dev.stella.cloud:8083/mqtt'
         );
     },
 
