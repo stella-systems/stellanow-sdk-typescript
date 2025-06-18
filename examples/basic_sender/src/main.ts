@@ -82,7 +82,7 @@ async function main(): Promise<void> {
                     new PhoneNumberModel(44, 753594)
                 )
             );
-        }, 1);
+        }, 50);
 
         // Stop sending messages when Enter key is pressed
         process.stdin.setEncoding('utf8');

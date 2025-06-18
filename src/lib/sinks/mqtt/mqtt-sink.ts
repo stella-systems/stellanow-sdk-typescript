@@ -261,8 +261,6 @@ class StellaNowMqttSink implements IStellaNowSink {
                 this.performanceMonitor.recordEvent();
             }
 
-            // resolve();
-
             this.mqttClient.publish(
                 this.getTopic(),
                 JSON.stringify(event),
