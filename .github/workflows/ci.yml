@@ -1,0 +1,47 @@
+name: Build and Test
+
+on:
+  pull_request:
+    branches:
+      - master
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x' # Use a recent Node.js version; adjust as needed
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install Dependencies
+        run: npm ci # Use 'ci' for consistent dependency installation
+
+      - name: Build
+        run: npm run build
+
+      - name: Run Tests
+        run: npm run test
+
+      - name: Extract Version and Tag Commit
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "VERSION=$version" >> $GITHUB_ENV
+
+      - name: Check Version Against Existing Tags
+        run: |
+          if git tag --list | grep -q "^v$VERSION$"; then
+            echo "Error: Version v$VERSION already exists in tags. Please increment the version number."
+            exit 1
+          else
+            echo "Version v$VERSION is new, proceeding with checks."
+          fi

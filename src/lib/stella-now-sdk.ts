@@ -18,6 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+import { CancellationToken } from './core/cancellation-token.ts';
 import { StellaNowEventWrapper } from './core/events.ts';
 import { SdkCreationError } from './core/exceptions.ts';
 import type { IStellaNowMessageSource} from './core/message-source.ts';
@@ -70,20 +71,23 @@ class StellaNowSDK {
      */
     public readonly OnError: StellaNowSignal<(message: string) => void>;
 
+    private eventLoopTask?: Promise<void>;
+    private cancellationToken: CancellationToken;
+    private readonly batchSize: number = 100; // Process up to 100 messages per cycle
+    private readonly loopDelayMs: number = 50; // Delay between cycles
+
     /**
      * Initializes a new instance of the StellaNowSDK.
      * @param projectInfo - The project configuration containing organization and project details.
      * @param sink - The sink implementation for publishing messages to the broker.
      * @param source - The message source for managing the message queue.
      * @param logger - The logger instance for logging events and errors.
-     * @param eventLoopIntervalInMs - Defines how long the thread sleeps between checking if any new messages are available.
      */
     constructor(
         private projectInfo: StellaNowProjectInfo,
         private sink: IStellaNowSink,
         private source: IStellaNowMessageSource,
-        private logger: ILogger,
-        private eventLoopIntervalInMs: number = 100
+        private logger: ILogger
     ) {
         this.OnConnected = sink.OnConnected;
         this.OnDisconnected = sink.OnDisconnected;
@@ -91,24 +95,21 @@ class StellaNowSDK {
 
         sink.OnMessageAck.subscribe((eventId) => source.markMessageAck(eventId));
 
-        setInterval(() => {
-            this.eventLoop().catch((err) => {
-                this.logger.error(`Event loop failed: ${String(err)}`);
-            });
-        }, eventLoopIntervalInMs);
+        this.cancellationToken = new CancellationToken();
     }
 
     /**
-     * Starts the SDK by initiating the sink's connection to the broker.
+     * Starts the SDK by initiating the sink's connection to the broker and starting the event loop.
      * @returns {Promise<void>} A promise that resolves when the SDK is started.
      * @throws {Error} If the sink fails to start or is already running.
-     * @example
-     * await sdk.start();
      */
     public async start(): Promise<void> {
         try {
             await this.sink.start();
             this.logger.info('StellaNowSDK started successfully');
+
+            // Start the persistent event loop
+            this.eventLoopTask = this.runEventLoop();
         } catch (err) {
             this.logger.error(`Failed to start StellaNowSDK: ${String(err)}`);
             throw err;
@@ -116,14 +117,22 @@ class StellaNowSDK {
     }
 
     /**
-     * Stops the SDK by terminating the sink's connection to the broker.
+     * Stops the SDK by terminating the sink's connection to the broker and stopping the event loop.
      * @returns {Promise<void>} A promise that resolves when the SDK is stopped.
      * @throws {Error} If the sink fails to stop or is not running.
-     * @example
-     * await sdk.stop();
      */
     public async stop(): Promise<void> {
         try {
+            // Signal cancellation to stop the event loop
+            this.cancellationToken.cancel();
+
+            // Wait for the event loop to finish
+            if (this.eventLoopTask) {
+                await this.eventLoopTask;
+                this.eventLoopTask = undefined;
+            }
+
+            // Stop the sink
             await this.sink.stop();
             this.logger.info('StellaNowSDK stopped successfully');
         } catch (err) {
@@ -135,8 +144,6 @@ class StellaNowSDK {
     /**
      * Enqueues an event for publishing to the broker.
      * @param event - The event wrapper to enqueue.
-     * @example
-     * sdk.sendEvent(myEvent);
      */
     public sendEvent(event: StellaNowEventWrapper): void {
         this.source.enqueue(event);
@@ -146,8 +153,6 @@ class StellaNowSDK {
     /**
      * Wraps and enqueues a message for publishing to the broker.
      * @param message - The base message to be wrapped and sent.
-     * @example
-     * sdk.SendMessage(myMessage);
      */
     public sendMessage(message: StellaNowMessageBase): void {
         const wrappedMessage = StellaNowMessageWrapper.fromMessage(message);
@@ -158,16 +163,39 @@ class StellaNowSDK {
         this.sendEvent(userDetailsEvent);
     }
 
+    public messagesInQueueCount(): number {
+        return this.source.length();
+    }
+
+    public messagesInFlightCount(): number {
+        return this.source.numberInFlight();
+    }
+
     /**
-     * Executes the event loop to process and publish queued messages.
-     * @returns {Promise<void>} A promise that resolves when the loop completes its current cycle.
+     * Runs the event loop continuously until cancellation is requested.
+     * @returns {Promise<void>} A promise that resolves when the loop is cancelled.
+     * @private
+     */
+    private async runEventLoop(): Promise<void> {
+        while (!this.cancellationToken.isCancelled) {
+            try {
+                await this.eventLoop();
+            } catch (err) {
+                this.logger.error(`Event loop iteration failed: ${String(err)}`);
+            }
+
+            // Add a small delay to prevent tight looping and allow other tasks to run
+            await new Promise(resolve => setTimeout(resolve, this.loopDelayMs));
+        }
+    }
+
+    /**
+     * Executes a single iteration of the event loop to process and publish queued messages.
+     * @returns {Promise<void>} A promise that resolves when the iteration completes.
      * @throws {Error} If publishing fails, requeued events are handled internally.
      * @private
      */
     private async eventLoop(): Promise<void> {
-        this.logger.debug('Running event loop');
-
-        // Check connection state instead of CanPublish
         if (!this.sink.IsConnected) {
             this.logger.warn('Unable to publish: Sink is not connected');
             return;
@@ -178,60 +206,41 @@ class StellaNowSDK {
             return;
         }
 
-        this.logger.debug('Publishing queued messages');
-
-        while (!this.source.isEmpty()) {
+        const batch: StellaNowEventWrapper[] = [];
+        while (!this.source.isEmpty() && batch.length < this.batchSize) {
             const event = this.source.tryDequeue();
+            if (event) batch.push(event);
+        }
 
-            if (event) {
-                try {
-                    this.logger.debug(`Publishing event: ${event.value.metadata.messageId}`);
-                    await this.sink.sendMessageAsync(event);
-                    this.logger.debug(`Event ${event.value.metadata.messageId} published successfully`);
-                } catch (err) {
-                    this.logger.error(`Failed to publish event ${event.value.metadata.messageId}: ${String(err)}`);
-                    this.source.enqueue(event); // Requeue on failure
-                }
-            }
+        if (batch.length > 0) {
+            this.logger.debug(`Publishing ${batch.length} queued messages`);
+            await Promise.all(
+                batch.map(event =>
+                    this.sink.sendMessageAsync(event)
+                        .catch(err => {
+                            this.logger.error(`Failed to publish event ${event.value.metadata.messageId}: ${String(err)}`);
+                            this.source.enqueue(event);
+                        })
+                )
+            );
         }
     }
 
     /**
      * Creates a configured instance of StellaNowSDK with MQTT and OIDC authentication.
-     * @remarks This factory method simplifies SDK setup by retrieving environment-based configurations,
-     * setting up OIDC authentication via `OidcMqttAuthStrategy`, and initializing an MQTT sink with
-     * `StellaNowMqttSink`. It uses a default in-memory `FifoQueue` for message queuing unless a custom
-     * message source is provided. The method handles exceptions for invalid or missing configurations.
-     * @param logger - The logger instance to use for logging events and errors (required).
-     * @param projectInfo - The project information (defaults to environment-based configuration via `ProjectInfo.createFromEnv()`).
-     * @param credentials - The credentials for OIDC authentication (defaults to environment-based configuration via `Credentials.createFromEnv()`).
-     * @param envConfig - The environment configuration (defaults to SaaS production settings via `EnvConfig.saasProd()`).
-     * @param messageSource - The message source for queuing events (defaults to a new `FifoQueue` instance).
-     * @returns {Promise<StellaNowSDK>} A configured StellaNowSDK instance ready for use.
-     * @throws {MissingEnvVariableError} If required environment variables (API_KEY, API_SECRET, ORGANIZATION_ID, PROJECT_ID) are not set.
-     * @throws {InvalidUuidError} If ORGANIZATION_ID or PROJECT_ID environment variables are not valid UUIDs.
-     * @throws {InvalidArgumentError} If any required parameter (e.g., logger) is null or invalid.
-     * @throws {SinkInitializationError} If the MQTT sink initialization fails due to invalid parameters or state.
-     * @throws {OidcAuthenticationError} If OIDC authentication fails during setup.
-     * @example
-     * const sdk = await StellaNowSDK.createWithMqttAndOidc(new DefaultLogger());
-     * await sdk.start();
-     * @example
-     * const customLogger = new CustomLogger();
-     * const customProjectInfo = ProjectInfo.create('550e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440001');
-     * const sdk = await StellaNowSDK.createWithMqttAndOidc(customLogger, customProjectInfo);
      */
     public static async createWithMqttAndOidc(
         logger: ILogger,
+        envConfig: StellaNowEnvironmentConfig = EnvConfig.saasProd(),
+        messageSource: IStellaNowMessageSource = new FifoQueue(),
         projectInfo: StellaNowProjectInfo = ProjectInfo.createFromEnv(),
         credentials: StellaNowCredentials = Credentials.createFromEnv(),
-        envConfig: StellaNowEnvironmentConfig = EnvConfig.saasProd(),
-        messageSource: IStellaNowMessageSource = new FifoQueue()
+        performanceMonitorOn: boolean = false
     ): Promise<StellaNowSDK> {
         try {
             logger.info('Creating StellaNowSDK instance with MQTT and OIDC authentication');
             const authStrategy = new OidcMqttAuthStrategy(logger, envConfig, projectInfo, credentials);
-            const mqttSink = new StellaNowMqttSink(logger, authStrategy, projectInfo, envConfig);
+            const mqttSink = new StellaNowMqttSink(logger, authStrategy, projectInfo, envConfig, performanceMonitorOn);
             const sdk = new StellaNowSDK(projectInfo, mqttSink, messageSource, logger);
 
             return Promise.resolve(sdk);
@@ -241,7 +250,5 @@ class StellaNowSDK {
         }
     }
 }
-
-
 
 export { StellaNowSDK };
