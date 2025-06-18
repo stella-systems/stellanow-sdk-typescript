@@ -147,7 +147,7 @@ class StellaNowSDK {
      */
     public sendEvent(event: StellaNowEventWrapper): void {
         this.source.enqueue(event);
-        // this.logger.debug(`Event enqueued: ${event.value.metadata.messageId}`);
+        this.logger.debug(`Event enqueued: ${event.value.metadata.messageId}`);
     }
 
     /**

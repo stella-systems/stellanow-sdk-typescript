@@ -175,11 +175,11 @@ class StellaNowMqttSink implements IStellaNowSink {
 
     public async sendMessageAsync(event: StellaNowEventWrapper): Promise<void> {
         if (!event) {
-            this.logger.debug('Failed to publish message: Event cannot be null');
+            this.logger.error('Failed to publish message: Event cannot be null');
             throw new SinkOperationError('Event cannot be null');
         }
         if (!this.IsConnected) {
-            this.logger.debug('Failed to publish message: Sink is not connected');
+            this.logger.error('Failed to publish message: Sink is not connected');
             throw new MqttConnectionException('Cannot publish message: Sink is not connected', this.envConfig.brokerUrl);
         }
 

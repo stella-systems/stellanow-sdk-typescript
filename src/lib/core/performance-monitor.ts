@@ -58,7 +58,7 @@ export class PerformanceMonitor {
 
         if (timeDiffSeconds > 0) {
             const mps = this.eventCount / timeDiffSeconds;
-            this.logger.warn(`MPS: ${mps.toFixed(2)}, Count: `);
+            this.logger.debug(`MPS: ${mps.toFixed(2)}`);
             this.eventCount = 0; // Reset counter
             this.lastLogTime = currentTime;
         }
