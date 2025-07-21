@@ -153,9 +153,10 @@ class StellaNowSDK {
     /**
      * Wraps and enqueues a message for publishing to the broker.
      * @param message - The base message to be wrapped and sent.
+     * @param originTimestamp - The date object representing the time when message was created in the system (can be overridden)
      */
-    public sendMessage(message: StellaNowMessageBase): void {
-        const wrappedMessage = StellaNowMessageWrapper.fromMessage(message);
+    public sendMessage(message: StellaNowMessageBase, originTimestamp: Date = new Date()): void {
+        const wrappedMessage = StellaNowMessageWrapper.fromMessage(message, originTimestamp);
         const userDetailsEvent = StellaNowEventWrapper.fromWrapper(
             this.projectInfo,
             wrappedMessage
