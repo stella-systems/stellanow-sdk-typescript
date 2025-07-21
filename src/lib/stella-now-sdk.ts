@@ -240,6 +240,7 @@ class StellaNowSDK {
     ): Promise<StellaNowSDK> {
         try {
             logger.info('Creating StellaNowSDK instance with MQTT and OIDC authentication');
+
             const authStrategy = new OidcMqttAuthStrategy(logger, envConfig, projectInfo, credentials);
             const mqttSink = new StellaNowMqttSink(logger, authStrategy, projectInfo, envConfig, performanceMonitorOn);
             const sdk = new StellaNowSDK(projectInfo, mqttSink, messageSource, logger);
