@@ -153,9 +153,10 @@ class StellaNowSDK {
     /**
      * Wraps and enqueues a message for publishing to the broker.
      * @param message - The base message to be wrapped and sent.
+     * @param originTimestamp - The date object representing the time when message was created in the system (can be overridden)
      */
-    public sendMessage(message: StellaNowMessageBase): void {
-        const wrappedMessage = StellaNowMessageWrapper.fromMessage(message);
+    public sendMessage(message: StellaNowMessageBase, originTimestamp: Date = new Date()): void {
+        const wrappedMessage = StellaNowMessageWrapper.fromMessage(message, originTimestamp);
         const userDetailsEvent = StellaNowEventWrapper.fromWrapper(
             this.projectInfo,
             wrappedMessage
@@ -239,6 +240,7 @@ class StellaNowSDK {
     ): Promise<StellaNowSDK> {
         try {
             logger.info('Creating StellaNowSDK instance with MQTT and OIDC authentication');
+
             const authStrategy = new OidcMqttAuthStrategy(logger, envConfig, projectInfo, credentials);
             const mqttSink = new StellaNowMqttSink(logger, authStrategy, projectInfo, envConfig, performanceMonitorOn);
             const sdk = new StellaNowSDK(projectInfo, mqttSink, messageSource, logger);

@@ -1,6 +1,6 @@
 {
   "name": "stellanow-sdk",
-  "version": "0.1.4-rc1",
+  "version": "0.1.4-rc2",
   "author": "Stella Technologies (UK) Limited",
   "license": "MIT",
   "main": "dist/index.js",
