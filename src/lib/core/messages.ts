@@ -114,13 +114,15 @@ class StellaNowMessageWrapper implements ToJSON {
     /**
      * Creates a new StellaNowMessageWrapper from a base message.
      * @param stellaNowMessage - The base StellaNow message.
+     * @param originTimestamp - The date object representing the time when message was created in the system (can be overridden)
      * @returns {StellaNowMessageWrapper} A wrapped message instance.
      */
-    public static fromMessage(stellaNowMessage: StellaNowMessageBase): StellaNowMessageWrapper {
+    public static fromMessage(stellaNowMessage: StellaNowMessageBase, originTimestamp: Date = new Date()): StellaNowMessageWrapper {
         return new StellaNowMessageWrapper(
             stellaNowMessage.eventTypeDefinitionId,
             stellaNowMessage.entityTypeIds,
-            JSON.stringify(stellaNowMessage.toJSON())
+            JSON.stringify(stellaNowMessage.toJSON()),
+            originTimestamp
         );
     }
 
@@ -129,18 +131,20 @@ class StellaNowMessageWrapper implements ToJSON {
      * @param eventTypeDefinitionId - The event type definition identifier.
      * @param entityTypeIds - An array of EntityType instances.
      * @param messageJson - The JSON string representing the message payload.
+     * @param originTimestamp - The date object representing the time when message was created in the system (can be overridden)
      * @throws {SyntaxError} If the messageJson is not valid JSON.
      * @throws {Error} If initialization fails due to other unexpected errors.
      */
     constructor(
         public readonly eventTypeDefinitionId: string,
         entityTypeIds: EntityType[],
-        messageJson: string
+        messageJson: string,
+        originTimestamp: Date = new Date()
     ) {
         try {
             this.metadata = new MessageMetadata(
                 crypto.randomUUID(),
-                new Date(),
+                originTimestamp,
                 eventTypeDefinitionId,
                 entityTypeIds
             );
