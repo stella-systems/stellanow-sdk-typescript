@@ -104,7 +104,7 @@ class StellaNowMqttSink implements IStellaNowSink {
             const parsed = parseInt(reconnectLimitEnv, 10);
             this.maxReconnectAttempts = isNaN(parsed) || parsed <= 0 ? null : parsed;
         } else {
-            this.maxReconnectAttempts = null; // null = infinite retries
+            this.maxReconnectAttempts = null;
         }
 
         this.logger.info(`Generated MQTT clientId: ${this.clientId}`);
@@ -227,7 +227,6 @@ class StellaNowMqttSink implements IStellaNowSink {
 
         try {
             this.logger.debug(`Publishing message with ID: ${event.value.metadata.messageId}`);
-            // Check connection state inside publish to minimize TOCTOU window
             await this.publish(event);
             this.logger.debug(`Message with ID ${event.value.metadata.messageId} published successfully`);
         } catch (err) {
@@ -250,7 +249,6 @@ class StellaNowMqttSink implements IStellaNowSink {
                 this.cancellationToken.cancel();
             }
 
-            // Wait for connection monitor to finish
             if (this.connectionMonitorTask) {
                 try {
                     await this.connectionMonitorTask;
@@ -361,7 +359,6 @@ class StellaNowMqttSink implements IStellaNowSink {
             const onError = (err: Error): void => {
                 client.off('connect', onConnect);
                 client.off('error', onError);
-                // Reset to disconnected on error
                 this.connectionState.forceState(ConnectionState.DISCONNECTED);
                 reject(new MqttConnectionException(err.message));
             };

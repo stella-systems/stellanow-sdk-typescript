@@ -73,8 +73,8 @@ class StellaNowSDK {
 
     private eventLoopTask?: Promise<void>;
     private cancellationToken: CancellationToken;
-    private readonly batchSize: number = 100;
-    private readonly loopDelayMs: number = 50;
+    private readonly batchSize: number = 100; // Process up to 100 messages per cycle
+    private readonly loopDelayMs: number = 50; // Delay between cycles
     private wasDisconnectedLogged: boolean = false;
 
     /**

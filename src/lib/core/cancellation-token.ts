@@ -30,7 +30,6 @@ export class CancellationToken {
      * Gets whether the operation has been cancelled.
      */
     public get isCancelled(): boolean {
-        // Reading both fields ensures memory barrier-like behavior
         return this._isCancelled || this._cancelledAt > 0;
     }
 
