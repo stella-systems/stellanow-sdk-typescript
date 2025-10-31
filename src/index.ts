@@ -23,6 +23,7 @@ export * from './lib/types/index.ts';
 export * from './lib/core/messages.ts';
 export * from './lib/core/events.ts';
 export * from './lib/core/message-source.ts';
+export * from './lib/core/exceptions.ts';
 export * from './lib/core/stellanow-signal.ts';
 export * from './lib/stella-now-sdk.ts';
 export * from './lib/sinks/i-stellanow-sink.ts';

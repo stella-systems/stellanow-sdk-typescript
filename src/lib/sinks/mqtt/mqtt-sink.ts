@@ -99,7 +99,6 @@ class StellaNowMqttSink implements IStellaNowSink {
         this.cancellationToken = new CancellationToken();
         this.clientId = this.generateClientId();
 
-        // Read RECONNECT_LIMIT from environment variable
         const reconnectLimitEnv = process.env[SINK_ENV_VARS.RECONNECT_LIMIT];
         if (reconnectLimitEnv) {
             const parsed = parseInt(reconnectLimitEnv, 10);
@@ -117,7 +116,6 @@ class StellaNowMqttSink implements IStellaNowSink {
      * @readonly
      */
     public get IsConnected(): boolean {
-        // Use state machine for accurate connection state
         return this.connectionState.isConnected && (this.mqttClient?.connected ?? false);
     }
 
@@ -128,8 +126,6 @@ class StellaNowMqttSink implements IStellaNowSink {
      * @returns {string} The generated client ID.
      */
     private generateClientId(): string {
-        // Dynamic import is async, but we need sync behavior
-        // Use timestamp + random as fallback for deterministic sync generation
         const timestamp = Date.now().toString(36);
         const random = Math.random().toString(36).substring(2, 12);
         const hash = `${timestamp}${random}`.substring(0, 10);
@@ -157,7 +153,6 @@ class StellaNowMqttSink implements IStellaNowSink {
 
         this.mqttClient.on('error', (err) => {
             this.handleError(`MQTT error: ${err.message}`);
-            // On error during connection, mark as disconnected
             if (this.connectionState.isConnecting) {
                 this.connectionState.forceState(ConnectionState.DISCONNECTED);
                 this.isConnecting = false;
@@ -197,6 +192,7 @@ class StellaNowMqttSink implements IStellaNowSink {
                     clean: true,
                     protocolVersion: 5,
                     manualConnect: true,
+                    reconnectPeriod: 0, // Disable auto-reconnect, we handle reconnection manually
                 });
                 this.setupEventHandlers();
             }
@@ -250,7 +246,6 @@ class StellaNowMqttSink implements IStellaNowSink {
         const release = await this.mutex.acquire();
 
         try {
-            // Cancel the connection monitor
             if (this.cancellationToken) {
                 this.cancellationToken.cancel();
             }
@@ -264,7 +259,6 @@ class StellaNowMqttSink implements IStellaNowSink {
                 }
             }
 
-            // Close the MQTT client
             if (this.mqttClient) {
                 await new Promise<void>((resolve) => {
                     this.mqttClient!.end(true, {}, () => resolve());
@@ -311,7 +305,6 @@ class StellaNowMqttSink implements IStellaNowSink {
 
     private async publish(event: StellaNowEventWrapper): Promise<void> {
         return new Promise((resolve, reject) => {
-            // Check connection state at publish time to minimize TOCTOU
             if (!this.mqttClient) {
                 reject(new MqttConnectionException('No MQTT client available', this.envConfig.brokerUrl));
                 return;
@@ -330,11 +323,10 @@ class StellaNowMqttSink implements IStellaNowSink {
                 this.getTopic(),
                 JSON.stringify(event),
                 { qos: 1 },
-                (error, packet?: Packet) => {
+                (error) => {
                     if (error) {
                         reject(new MqttConnectionException(error.message, this.envConfig.brokerUrl));
                     } else {
-                        // Only ACK after successful publish (removed duplicate early ACK)
                         this.OnMessageAck.trigger(event.value.metadata.messageId);
                         resolve();
                     }
@@ -355,7 +347,6 @@ class StellaNowMqttSink implements IStellaNowSink {
                 return;
             }
 
-            // Transition to CONNECTING state
             if (!this.connectionState.tryTransition(ConnectionState.CONNECTING)) {
                 reject(new MqttConnectionException('Invalid state transition to CONNECTING'));
                 return;
@@ -388,16 +379,13 @@ class StellaNowMqttSink implements IStellaNowSink {
 
         try {
             while (!cancellationToken.isCancelled) {
-                // Guard against concurrent connection attempts
                 if (!this.IsConnected && this.mqttClient && !this.isConnecting) {
-                    // Check if we've exceeded max attempts (only if limit is set)
                     if (this.maxReconnectAttempts !== null && consecutiveFailures >= this.maxReconnectAttempts) {
                         this.logger.error(`Maximum reconnection attempts (${this.maxReconnectAttempts}) reached. Stopping connection monitor.`);
                         this.OnError.trigger(`Failed to connect after ${this.maxReconnectAttempts} attempts`);
                         break;
                     }
 
-                    // Set flag to prevent concurrent attempts
                     this.isConnecting = true;
                     attempt++;
                     consecutiveFailures++;
@@ -415,14 +403,12 @@ class StellaNowMqttSink implements IStellaNowSink {
                     } catch (err) {
                         this.logger.error(`Connection attempt ${attempt} failed: ${String(err)}`);
                         this.isConnecting = false;
-                        // Ensure we're in disconnected state after failure
                         this.connectionState.forceState(ConnectionState.DISCONNECTED);
                     }
                 }
 
                 // Only log retry and delay if a connection attempt is needed
                 if (!this.IsConnected && this.mqttClient && !this.isConnecting) {
-                    // Check again before waiting (only if limit is set)
                     if (this.maxReconnectAttempts !== null && consecutiveFailures >= this.maxReconnectAttempts) {
                         break;
                     }
@@ -437,7 +423,6 @@ class StellaNowMqttSink implements IStellaNowSink {
                     this.logger.info(`Retrying connection in ${delayMs / 1000} seconds... (${attemptsInfo})`);
                     await new Promise((resolve) => setTimeout(resolve, delayMs));
                 } else {
-                    // If connected or connecting, wait a shorter interval before checking again
                     await new Promise((resolve) => setTimeout(resolve, 2500));
                 }
             }

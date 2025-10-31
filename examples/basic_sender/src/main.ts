@@ -88,7 +88,6 @@ async function main(): Promise<void> {
                 ),
                 date
             );
-            console.log(date.toISOString() + ' - Sent message')
         }, 50);
 
         // Stop sending messages when Enter key is pressed

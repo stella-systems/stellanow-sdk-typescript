@@ -19,6 +19,31 @@
 // IN THE SOFTWARE.
 
 import type { StellaNowEventWrapper } from './events.ts';
+import { QueueFullError } from './exceptions.ts';
+
+/**
+ * Queue overflow strategy for handling full message queues.
+ * @remarks Determines behavior when attempting to enqueue messages to a full queue.
+ */
+enum QueueOverflowStrategy {
+    /**
+     * Removes the oldest message from the queue to make room for the new one.
+     * Suitable for real-time data where recent information matters most.
+     */
+    DROP_OLDEST = 'DROP_OLDEST',
+
+    /**
+     * Rejects the incoming message when the queue is full.
+     * Better for preserving historical data integrity.
+     */
+    DROP_NEWEST = 'DROP_NEWEST',
+
+    /**
+     * Throws a QueueFullError when attempting to enqueue to a full queue.
+     * Allows applications to implement custom handling logic.
+     */
+    RAISE_EXCEPTION = 'RAISE_EXCEPTION'
+}
 
 /**
  * Interface representing a message source for the StellaNow SDK.
@@ -71,10 +96,26 @@ interface IStellaNowMessageSource {
 /**
  * A First-In-First-Out (FIFO) queue implementation of the IStellaNowMessageSource.
  * This class manages messages in a queue and tracks those that are in-flight.
+ * @remarks Supports configurable queue size limits and overflow strategies.
  */
 class FifoQueue implements IStellaNowMessageSource {
     private items: StellaNowEventWrapper[] = [];
     private inFlight: Map<string, StellaNowEventWrapper> = new Map<string, StellaNowEventWrapper>();
+    private readonly maxSize: number;
+    private readonly overflowStrategy: QueueOverflowStrategy;
+
+    /**
+     * Creates a new FifoQueue instance.
+     * @param maxSize - Maximum number of messages the queue can hold (default: 100,000).
+     * @param overflowStrategy - Strategy for handling queue overflow (default: DROP_OLDEST).
+     */
+    constructor(
+        maxSize: number = 100_000,
+        overflowStrategy: QueueOverflowStrategy = QueueOverflowStrategy.DROP_OLDEST
+    ) {
+        this.maxSize = maxSize;
+        this.overflowStrategy = overflowStrategy;
+    }
 
     /**
      * Marks a message as acknowledged, removing it from the in-flight tracking.
@@ -97,9 +138,28 @@ class FifoQueue implements IStellaNowMessageSource {
     /**
      * Enqueues a message to the queue.
      * @param event - The message event to enqueue.
-     * @returns True, indicating the message was enqueued.
+     * @returns True if the message was enqueued, false if rejected (DROP_NEWEST strategy).
+     * @throws {QueueFullError} If queue is full and overflow strategy is RAISE_EXCEPTION.
      */
     enqueue(event: StellaNowEventWrapper): boolean {
+        if (this.items.length >= this.maxSize) {
+            switch (this.overflowStrategy) {
+                case QueueOverflowStrategy.DROP_OLDEST:
+                    this.items.shift();
+                    this.items.push(event);
+                    return true;
+
+                case QueueOverflowStrategy.DROP_NEWEST:
+                    return false;
+
+                case QueueOverflowStrategy.RAISE_EXCEPTION:
+                    throw new QueueFullError(this.maxSize, this.items.length);
+
+                default:
+                    return false;
+            }
+        }
+
         this.items.push(event);
         return true;
     }
@@ -142,4 +202,4 @@ class FifoQueue implements IStellaNowMessageSource {
     }
 }
 
-export { IStellaNowMessageSource, FifoQueue };
+export { IStellaNowMessageSource, FifoQueue, QueueOverflowStrategy };
