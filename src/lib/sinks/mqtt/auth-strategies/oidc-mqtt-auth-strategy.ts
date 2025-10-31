@@ -205,7 +205,6 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
     /**
      * Attempts to refresh the existing access token.
      * @returns {Promise<boolean>} True if the refresh was successful, false otherwise.
-     * @throws {OidcAuthenticationError} If an unexpected error occurs during refresh.
      */
     private async refreshTokensAsync(): Promise<boolean> {
         this.logger.info('Attempting token refresh');
@@ -232,7 +231,7 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
             return true;
         } catch (err: unknown) {
             this.logger.error(`Token refresh error: ${getErrorMessage(err)}`);
-            throw new OidcAuthenticationError('Token refresh failed', err);
+            return false; // Return false to allow fallback to loginAsync
         }
     }
 
