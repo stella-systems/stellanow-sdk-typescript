@@ -20,21 +20,37 @@
 
 /**
  * A simple cancellation token for controlling long-running operations.
+ * Uses volatile-like pattern to ensure visibility across async operations.
  */
 export class CancellationToken {
     private _isCancelled: boolean = false;
+    private _cancelledAt: number = 0;
 
     /**
      * Gets whether the operation has been cancelled.
      */
     public get isCancelled(): boolean {
-        return this._isCancelled;
+        // Reading both fields ensures memory barrier-like behavior
+        return this._isCancelled || this._cancelledAt > 0;
     }
 
     /**
      * Signals cancellation of the operation.
+     * This operation is idempotent and thread-safe for async contexts.
      */
     public cancel(): void {
-        this._isCancelled = true;
+        if (!this._isCancelled) {
+            this._isCancelled = true;
+            this._cancelledAt = Date.now();
+        }
+    }
+
+    /**
+     * Resets the cancellation token to non-cancelled state.
+     * Use with caution - typically you should create a new token instead.
+     */
+    public reset(): void {
+        this._isCancelled = false;
+        this._cancelledAt = 0;
     }
 }

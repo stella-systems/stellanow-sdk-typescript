@@ -42,13 +42,19 @@ class StellaNowSignal<T extends (...args: any[]) => void   = () => void> {
     /**
      * Trigger the signal, calling all subscribed listeners.
      * @param args Arguments to pass to the listeners.
+     * @remarks Errors in individual listeners are caught and logged separately,
+     * preventing one failing listener from blocking others.
      */
     public trigger(...args: Parameters<T>): void {
-        try {
-            this.listeners.forEach(listener => listener(...args));
-        } catch {
-            // TODO: Log out an error?
-        }
+        const listenersCopy = [...this.listeners];
+        listenersCopy.forEach(listener => {
+            try {
+                listener(...args);
+            } catch (err: unknown) {
+                // eslint-disable-next-line no-console
+                console.error('Error in signal listener:', err);
+            }
+        });
     }
 }
 

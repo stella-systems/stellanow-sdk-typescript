@@ -208,13 +208,24 @@ class StellaNowSDK {
         }
 
         const batch: StellaNowEventWrapper[] = [];
-        while (!this.source.isEmpty() && batch.length < this.batchSize) {
+        let dequeueCount = 0;
+
+        while (!this.source.isEmpty() && dequeueCount < this.batchSize) {
+            if (!this.sink.IsConnected) {
+                this.logger.warn('Connection lost during message dequeue');
+                break;
+            }
+
             const event = this.source.tryDequeue();
-            if (event) batch.push(event);
+            if (event) {
+                batch.push(event);
+                dequeueCount++;
+            }
         }
 
         if (batch.length > 0) {
             this.logger.debug(`Publishing ${batch.length} queued messages`);
+
             await Promise.all(
                 batch.map(event =>
                     this.sink.sendMessageAsync(event)

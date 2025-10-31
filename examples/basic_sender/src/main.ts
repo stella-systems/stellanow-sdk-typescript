@@ -18,13 +18,18 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-import { FifoQueue, StellaNowSDK, ProjectInfo, Credentials, EnvConfig } from 'stellanow-sdk';
+import {
+    Credentials,
+    EnvConfig,
+    FifoQueue,
+    ProjectInfo,
+    StellaNowSDK,
+} from 'stellanow-sdk';
 
 import { PhoneNumberModel } from './messages/models/phone-number-model.ts';
 import { UserDetailsMessage } from './messages/user-details-message.ts';
 import { UserLoginMessage } from './messages/user-login-message.ts';
 import { PinoLogger } from './pino-logger.ts';
-
 
 async function main(): Promise<void> {
     const logger = new PinoLogger();
@@ -33,7 +38,7 @@ async function main(): Promise<void> {
         stellaSDK = await StellaNowSDK.createWithMqttAndOidc(
             logger,
             EnvConfig.saasDev(),
-            new FifoQueue,
+            new FifoQueue(),
             ProjectInfo.createFromEnv(),
             Credentials.createFromEnv(),
             true
@@ -66,7 +71,6 @@ async function main(): Promise<void> {
 
         // Start sending two messages every 0.1 second
         const intervalId = setInterval(() => {
-
             stellaSDK.sendMessage(
                 new UserLoginMessage(
                     'e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8',
@@ -74,14 +78,17 @@ async function main(): Promise<void> {
                     new Date(Date.now())
                 )
             );
-
+            const date = new Date();
+            date.setHours(date.getHours() - 6);
             stellaSDK.sendMessage(
                 new UserDetailsMessage(
                     'e25bbbe0-38f4-4fc1-a819-3ad55bc6fcd8',
                     'd7db42f0-13ab-4c89-a7c8-fae73691d3ed',
                     new PhoneNumberModel(44, 753594)
-                )
+                ),
+                date
             );
+            console.log(date.toISOString() + ' - Sent message')
         }, 50);
 
         // Stop sending messages when Enter key is pressed

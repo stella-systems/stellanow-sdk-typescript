@@ -61,6 +61,34 @@ Set the following environment variables before initializing the SDK:
 - `ORGANIZATION_ID`: The unique identifier for your organization.
 - `PROJECT_ID`: The unique identifier for your project.
 
+#### Optional Environment Variables
+
+The SDK also supports optional environment variables for advanced configuration:
+
+- **`SDK_NAME`**: Customizes the MQTT Client ID for easier identification and debugging.
+  - **Format**: When set, the MQTT Client ID becomes `StellaNowSdkTS_{hash}_{SDK_NAME}`
+  - **Default**: If not set, the Client ID is `StellaNowSdkTS_{hash}`
+  - **Use Cases**:
+    - Environment identification (e.g., `SDK_NAME=production`, `SDK_NAME=staging`)
+    - Service identification in microservices (e.g., `SDK_NAME=payment-service`)
+    - Version tracking (e.g., `SDK_NAME=api-v2`)
+    - Testing and debugging (e.g., `SDK_NAME=test-run-123`)
+  - **Example**: `SDK_NAME=production-api node app.js`
+  - **Result**: MQTT Client ID will be `StellaNowSdkTS_mhdlls6d8k_production-api`
+
+- **`RECONNECT_LIMIT`**: Sets the maximum number of reconnection attempts when connection is lost.
+  - **Format**: Positive integer (e.g., `5`, `10`, `100`)
+  - **Default**: Unlimited retries if not set
+  - **Behavior**:
+    - If set to a number (e.g., `RECONNECT_LIMIT=5`), the SDK will attempt to reconnect up to 5 times
+    - If not set or set to `0` or negative value, the SDK will retry indefinitely with exponential backoff
+    - After reaching the limit, the SDK stops reconnection attempts and logs an error
+  - **Example**: `RECONNECT_LIMIT=10 node app.js`
+  - **Use Cases**:
+    - Preventing infinite retry loops in production environments
+    - Failing fast in CI/CD pipelines and testing
+    - Graceful degradation in microservices architectures
+
 Then, initialize the SDK with the appropriate configuration. 
 
 ```typescript
