@@ -21,6 +21,7 @@
 import { Mutex } from 'async-mutex';
 import type { MqttClient, Packet } from 'mqtt';
 import mqtt from 'mqtt';
+import { nanoid } from 'nanoid';
 
 import type { IMqttAuthStrategy } from './auth-strategies/i-mqtt-auth-strategy.ts';
 import { ConnectionState, ConnectionStateManager } from './connection-state.ts';
@@ -33,11 +34,11 @@ import {
 } from '../../core/exceptions.ts';
 import { PerformanceMonitor } from '../../core/performance-monitor.ts';
 import { StellaNowSignal } from '../../core/stellanow-signal.ts';
+import { SINK_ENV_VARS } from '../../types/constants.ts';
 import type {
     StellaNowEnvironmentConfig,
     ILogger
 } from '../../types/index.ts';
-import { SINK_ENV_VARS } from '../../types/constants.ts';
 import type { IStellaNowSink } from '../i-stellanow-sink.ts';
 
 /**
@@ -126,10 +127,7 @@ class StellaNowMqttSink implements IStellaNowSink {
      * @returns {string} The generated client ID.
      */
     private generateClientId(): string {
-        const timestamp = Date.now().toString(36);
-        const random = Math.random().toString(36).substring(2, 12);
-        const hash = `${timestamp}${random}`.substring(0, 10);
-
+        const hash = nanoid(10);
         const sdkName = process.env.SDK_NAME;
         return sdkName ? `StellaNowSdkTS_${hash}_${sdkName}` : `StellaNowSdkTS_${hash}`;
     }
