@@ -340,64 +340,32 @@ export class DefaultLogger implements ILogger {
 
 StellaNowSDK offers flexibility to adapt to specific needs.
 
-### Configuring Queue Overflow Behavior
+### Message Queue
 
-The SDK implements configurable queue overflow strategies to handle network instability and varying data criticality requirements. By default, it uses a 100,000-message queue with `DROP_OLDEST` strategy.
+The SDK uses an in-memory FIFO queue to buffer messages during network interruptions. The queue has unlimited capacity, automatically growing as needed to accommodate all messages until they can be sent.
 
-#### Available Overflow Strategies
-
-The SDK provides three distinct approaches:
-
-1. **`DROP_OLDEST`** (default): Removes the earliest messages when capacity is exceeded. Suitable for real-time data where recent information matters most.
-
-2. **`DROP_NEWEST`**: Rejects incoming messages when the queue reaches maximum size. Better for preserving historical data integrity.
-
-3. **`RAISE_EXCEPTION`**: Throws a `QueueFullError` when full, allowing applications to implement custom handling logic. Recommended for critical data requiring explicit decision-making.
-
-#### Configuration Examples
-
-For standard scenarios with custom queue size:
+#### Basic Usage
 
 ```typescript
-import { FifoQueue, QueueOverflowStrategy } from 'stellanow-sdk';
+import { FifoQueue } from 'stellanow-sdk';
 
-const queue = new FifoQueue(
-  50_000, // maxSize: 50,000 messages
-  QueueOverflowStrategy.DROP_OLDEST // default strategy
-);
-
+const queue = new FifoQueue();
 const sdk = new StellaNowSDK(projectInfo, mqttSink, queue, logger);
 ```
 
-For critical applications requiring exception-based handling:
-
-```typescript
-import { FifoQueue, QueueOverflowStrategy, QueueFullError } from 'stellanow-sdk';
-
-const queue = new FifoQueue(
-  200_000,
-  QueueOverflowStrategy.RAISE_EXCEPTION
-);
-
-const sdk = new StellaNowSDK(projectInfo, mqttSink, queue, logger);
-
-try {
-  sdk.sendMessage(criticalMessage);
-} catch (error) {
-  if (error instanceof QueueFullError) {
-    // Implement backup strategy
-    await writeToBackupFile(criticalMessage);
-    logger.error(`Queue full: ${error.currentSize}/${error.queueSize}`);
-  }
-}
-```
+The queue automatically:
+- Buffers messages when the MQTT connection is down
+- Preserves message order (FIFO - First In, First Out)
+- Re-enqueues in-flight messages if connection is lost during transmission
+- Resumes sending when connection is restored
 
 #### Memory Considerations
 
-Metadata-only messages consume approximately 3-5 KB each. A 100,000-message queue uses roughly 300-500 MB of memory. Adjust queue size based on:
-- System available memory
-- Expected message throughput
-- Maximum tolerable downtime for MQTT connection
+Since the queue is unlimited, monitor memory usage in production environments:
+- Each message consumes approximately 3-5 KB of memory
+- A queue with 100,000 messages uses roughly 300-500 MB
+- Consider implementing your own queue size limits or persistence strategy for critical applications
+- Monitor queue length using `queue.length()` method
 
 ### Customizing the Message Queue Strategy
 
