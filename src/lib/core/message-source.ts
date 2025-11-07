@@ -42,7 +42,14 @@ enum QueueOverflowStrategy {
      * Throws a QueueFullError when attempting to enqueue to a full queue.
      * Allows applications to implement custom handling logic.
      */
-    RAISE_EXCEPTION = 'RAISE_EXCEPTION'
+    RAISE_EXCEPTION = 'RAISE_EXCEPTION',
+
+    /**
+     * Allows unlimited queue growth without any size restrictions.
+     * WARNING: This strategy can lead to unbounded memory consumption.
+     * Monitor system resources carefully when using this option.
+     */
+    UNLIMITED = 'UNLIMITED'
 }
 
 /**
@@ -107,11 +114,11 @@ class FifoQueue implements IStellaNowMessageSource {
     /**
      * Creates a new FifoQueue instance.
      * @param maxSize - Maximum number of messages the queue can hold (default: 100,000).
-     * @param overflowStrategy - Strategy for handling queue overflow (default: DROP_OLDEST).
+     * @param overflowStrategy - Strategy for handling queue overflow (default: UNLIMITED).
      */
     constructor(
         maxSize: number = 100_000,
-        overflowStrategy: QueueOverflowStrategy = QueueOverflowStrategy.DROP_OLDEST
+        overflowStrategy: QueueOverflowStrategy = QueueOverflowStrategy.UNLIMITED
     ) {
         this.maxSize = maxSize;
         this.overflowStrategy = overflowStrategy;
@@ -142,7 +149,7 @@ class FifoQueue implements IStellaNowMessageSource {
      * @throws {QueueFullError} If queue is full and overflow strategy is RAISE_EXCEPTION.
      */
     enqueue(event: StellaNowEventWrapper): boolean {
-        if (this.items.length >= this.maxSize) {
+        if (this.items.length >= this.maxSize && this.overflowStrategy !== QueueOverflowStrategy.UNLIMITED) {
             switch (this.overflowStrategy) {
                 case QueueOverflowStrategy.DROP_OLDEST:
                     this.items.shift();
@@ -199,6 +206,14 @@ class FifoQueue implements IStellaNowMessageSource {
      */
     length(): number {
         return this.items.length;
+    }
+
+    /**
+     * Retrieves the current overflow strategy being used by the queue.
+     * @returns The queue overflow strategy.
+     */
+    getOverflowStrategy(): QueueOverflowStrategy {
+        return this.overflowStrategy;
     }
 }
 
