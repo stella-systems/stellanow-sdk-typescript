@@ -340,32 +340,100 @@ export class DefaultLogger implements ILogger {
 
 StellaNowSDK offers flexibility to adapt to specific needs.
 
-### Message Queue
+### Configuring Queue Overflow Behavior
 
-The SDK uses an in-memory FIFO queue to buffer messages during network interruptions. The queue has unlimited capacity, automatically growing as needed to accommodate all messages until they can be sent.
+The SDK implements configurable queue overflow strategies to handle network instability and varying data criticality requirements. By default, it uses a 100,000-message queue with `UNLIMITED` strategy.
 
-#### Basic Usage
+#### Available Overflow Strategies
+
+The SDK provides four distinct approaches:
+
+1. **`UNLIMITED`** (default): Allows unlimited queue growth without any size restrictions. The queue will continue to accept all messages regardless of memory consumption. **Warning**: This strategy can lead to unbounded memory usage. Monitor system resources carefully when using this option. The SDK will log a warning message at startup when using this strategy.
+
+2. **`DROP_OLDEST`**: Removes the earliest messages when capacity is exceeded. Suitable for real-time data where recent information matters most.
+
+3. **`DROP_NEWEST`**: Rejects incoming messages when the queue reaches maximum size. Better for preserving historical data integrity.
+
+4. **`RAISE_EXCEPTION`**: Throws a `QueueFullError` when full, allowing applications to implement custom handling logic. Recommended for critical data requiring explicit decision-making.
+
+#### Configuration Examples
+
+For default unlimited queue (no message loss, but requires memory monitoring):
 
 ```typescript
 import { FifoQueue } from 'stellanow-sdk';
 
+// Default: unlimited queue growth
 const queue = new FifoQueue();
+
+const sdk = new StellaNowSDK(projectInfo, mqttSink, queue, logger);
+// SDK will log a warning at startup about unlimited queue growth
+```
+
+For scenarios with memory constraints using DROP_OLDEST strategy:
+
+```typescript
+import { FifoQueue, QueueOverflowStrategy } from 'stellanow-sdk';
+
+const queue = new FifoQueue(
+  50_000, // maxSize: 50,000 messages
+  QueueOverflowStrategy.DROP_OLDEST
+);
+
 const sdk = new StellaNowSDK(projectInfo, mqttSink, queue, logger);
 ```
 
-The queue automatically:
-- Buffers messages when the MQTT connection is down
-- Preserves message order (FIFO - First In, First Out)
-- Re-enqueues in-flight messages if connection is lost during transmission
-- Resumes sending when connection is restored
+For preserving historical data integrity using DROP_NEWEST strategy:
+
+```typescript
+import { FifoQueue, QueueOverflowStrategy } from 'stellanow-sdk';
+
+const queue = new FifoQueue(
+  50_000, // maxSize: 50,000 messages
+  QueueOverflowStrategy.DROP_NEWEST
+);
+
+const sdk = new StellaNowSDK(projectInfo, mqttSink, queue, logger);
+// New messages will be rejected when queue is full, preserving older messages
+```
+
+For critical applications requiring exception-based handling:
+
+```typescript
+import { FifoQueue, QueueOverflowStrategy, QueueFullError } from 'stellanow-sdk';
+
+const queue = new FifoQueue(
+  200_000,
+  QueueOverflowStrategy.RAISE_EXCEPTION
+);
+
+const sdk = new StellaNowSDK(projectInfo, mqttSink, queue, logger);
+
+try {
+  sdk.sendMessage(criticalMessage);
+} catch (error) {
+  if (error instanceof QueueFullError) {
+    // Implement backup strategy
+    await writeToBackupFile(criticalMessage);
+    logger.error(`Queue full: ${error.currentSize}/${error.queueSize}`);
+  }
+}
+```
 
 #### Memory Considerations
 
-Since the queue is unlimited, monitor memory usage in production environments:
-- Each message consumes approximately 3-5 KB of memory
-- A queue with 100,000 messages uses roughly 300-500 MB
-- Consider implementing your own queue size limits or persistence strategy for critical applications
-- Monitor queue length using `queue.length()` method
+Metadata-only messages consume approximately 3-5 KB each. A 100,000-message queue uses roughly 300-500 MB of memory.
+
+When using the **`UNLIMITED`** strategy (default):
+- The queue will grow indefinitely and can consume all available system memory
+- Monitor memory usage actively, especially during extended network outages
+- Consider implementing external monitoring and alerting for memory consumption
+- Suitable for applications where no message loss is acceptable and sufficient memory is available
+
+When using size-limited strategies (`DROP_OLDEST`, `DROP_NEWEST`, `RAISE_EXCEPTION`), adjust queue size based on:
+- System available memory
+- Expected message throughput
+- Maximum tolerable downtime for MQTT connection
 
 ### Customizing the Message Queue Strategy
 

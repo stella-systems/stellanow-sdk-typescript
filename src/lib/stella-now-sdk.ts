@@ -22,7 +22,7 @@ import { CancellationToken } from './core/cancellation-token.ts';
 import { StellaNowEventWrapper } from './core/events.ts';
 import { SdkCreationError } from './core/exceptions.ts';
 import type { IStellaNowMessageSource} from './core/message-source.ts';
-import { FifoQueue } from './core/message-source.ts';
+import { FifoQueue, QueueOverflowStrategy } from './core/message-source.ts';
 import type { StellaNowMessageBase } from './core/messages.ts';
 import { StellaNowMessageWrapper } from './core/messages.ts';
 import type { StellaNowSignal } from './core/stellanow-signal.ts';
@@ -102,6 +102,17 @@ class StellaNowSDK {
                 this.wasDisconnectedLogged = false;
             }
         });
+
+        // Check if using FifoQueue with UNLIMITED strategy and log warning
+        if (source instanceof FifoQueue) {
+            if (source.getOverflowStrategy() === QueueOverflowStrategy.UNLIMITED) {
+                this.logger.warn(
+                    'WARNING: Message queue is using UNLIMITED overflow strategy. ' +
+                    'This allows unbounded queue growth which may lead to high memory consumption. ' +
+                    'Please monitor system resources carefully.'
+                );
+            }
+        }
 
         this.cancellationToken = new CancellationToken();
     }
