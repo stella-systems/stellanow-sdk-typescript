@@ -46,6 +46,7 @@ enum QueueOverflowStrategy {
 
     /**
      * Allows unlimited queue growth without any size restrictions.
+     * The maxSize parameter is ignored when using this strategy.
      * WARNING: This strategy can lead to unbounded memory consumption.
      * Monitor system resources carefully when using this option.
      */
@@ -114,6 +115,7 @@ class FifoQueue implements IStellaNowMessageSource {
     /**
      * Creates a new FifoQueue instance.
      * @param maxSize - Maximum number of messages the queue can hold (default: 100,000).
+     *                  Note: This parameter is ignored when overflowStrategy is UNLIMITED.
      * @param overflowStrategy - Strategy for handling queue overflow (default: UNLIMITED).
      */
     constructor(

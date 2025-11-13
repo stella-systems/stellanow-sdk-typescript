@@ -342,13 +342,13 @@ StellaNowSDK offers flexibility to adapt to specific needs.
 
 ### Configuring Queue Overflow Behavior
 
-The SDK implements configurable queue overflow strategies to handle network instability and varying data criticality requirements. By default, it uses a 100,000-message queue with `UNLIMITED` strategy.
+The SDK implements configurable queue overflow strategies to handle network instability and varying data criticality requirements. By default, it uses the `UNLIMITED` strategy, which allows the queue to grow without any size restrictions (the default `maxSize` parameter is ignored when using this strategy).
 
 #### Available Overflow Strategies
 
 The SDK provides four distinct approaches:
 
-1. **`UNLIMITED`** (default): Allows unlimited queue growth without any size restrictions. The queue will continue to accept all messages regardless of memory consumption. **Warning**: This strategy can lead to unbounded memory usage. Monitor system resources carefully when using this option. The SDK will log a warning message at startup when using this strategy.
+1. **`UNLIMITED`** (default): Allows unlimited queue growth without any size restrictions. The `maxSize` parameter is ignored when using this strategy. The queue will continue to accept all messages regardless of memory consumption. **Warning**: This strategy can lead to unbounded memory usage. Monitor system resources carefully when using this option. The SDK will log a warning message at startup when using this strategy.
 
 2. **`DROP_OLDEST`**: Removes the earliest messages when capacity is exceeded. Suitable for real-time data where recent information matters most.
 
@@ -422,10 +422,11 @@ try {
 
 #### Memory Considerations
 
-Metadata-only messages consume approximately 3-5 KB each. A 100,000-message queue uses roughly 300-500 MB of memory.
+Metadata-only messages consume approximately 3-5 KB each. For reference, a queue with 100,000 messages would use roughly 300-500 MB of memory.
 
 When using the **`UNLIMITED`** strategy (default):
-- The queue will grow indefinitely and can consume all available system memory
+- The queue will grow indefinitely without any size limit and can consume all available system memory
+- The `maxSize` parameter is ignored - there is no upper bound on queue size
 - Monitor memory usage actively, especially during extended network outages
 - Consider implementing external monitoring and alerting for memory consumption
 - Suitable for applications where no message loss is acceptable and sufficient memory is available
