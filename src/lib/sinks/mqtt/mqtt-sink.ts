@@ -21,8 +21,10 @@
 import { Mutex } from 'async-mutex';
 import type { MqttClient, Packet } from 'mqtt';
 import mqtt from 'mqtt';
+import { nanoid } from 'nanoid';
 
 import type { IMqttAuthStrategy } from './auth-strategies/i-mqtt-auth-strategy.ts';
+import { ConnectionState, ConnectionStateManager } from './connection-state.ts';
 import { CancellationToken } from '../../core/cancellation-token.ts';
 import type { StellaNowEventWrapper } from '../../core/events.ts';
 import {
@@ -32,6 +34,7 @@ import {
 } from '../../core/exceptions.ts';
 import { PerformanceMonitor } from '../../core/performance-monitor.ts';
 import { StellaNowSignal } from '../../core/stellanow-signal.ts';
+import { SINK_ENV_VARS } from '../../types/constants.ts';
 import type {
     StellaNowEnvironmentConfig,
     ILogger
@@ -54,8 +57,12 @@ class StellaNowMqttSink implements IStellaNowSink {
     private mutex = new Mutex();
     private connectionMonitorTask?: Promise<void>;
     private cancellationToken?: CancellationToken;
-    private static readonly BaseReconnectDelayMs = 2500; // 5 seconds
-    private static readonly MaxReconnectDelayMs = 30000; // 60 seconds
+    private connectionState = new ConnectionStateManager();
+    private isConnecting = false; // Guards against concurrent connection attempts
+    private readonly clientId: string; // Persistent client ID for the entire lifecycle
+    private readonly maxReconnectAttempts: number | null; // null = infinite retries
+    private static readonly BaseReconnectDelayMs = 2500; // 2.5 seconds
+    private static readonly MaxReconnectDelayMs = 30000; // 30 seconds
 
     private readonly performanceMonitor: PerformanceMonitor | null = null;
 
@@ -91,6 +98,18 @@ class StellaNowMqttSink implements IStellaNowSink {
         }
 
         this.cancellationToken = new CancellationToken();
+        this.clientId = this.generateClientId();
+
+        const reconnectLimitEnv = process.env[SINK_ENV_VARS.RECONNECT_LIMIT];
+        if (reconnectLimitEnv) {
+            const parsed = parseInt(reconnectLimitEnv, 10);
+            this.maxReconnectAttempts = isNaN(parsed) || parsed <= 0 ? null : parsed;
+        } else {
+            this.maxReconnectAttempts = null;
+        }
+
+        this.logger.info(`Generated MQTT clientId: ${this.clientId}`);
+        this.logger.info(`Max reconnect attempts: ${this.maxReconnectAttempts === null ? 'infinite' : this.maxReconnectAttempts}`);
     }
 
     /**
@@ -98,7 +117,19 @@ class StellaNowMqttSink implements IStellaNowSink {
      * @readonly
      */
     public get IsConnected(): boolean {
-        return this.mqttClient?.connected ?? false;
+        return this.connectionState.isConnected && (this.mqttClient?.connected ?? false);
+    }
+
+    /**
+     * Generates a unique MQTT client ID.
+     * Format: "StellaNowSdkTS_{nanoid}_{SDK_NAME}" or "StellaNowSdkTS_{nanoid}" if SDK_NAME not set.
+     * @private
+     * @returns {string} The generated client ID.
+     */
+    private generateClientId(): string {
+        const hash = nanoid(10);
+        const sdkName = process.env.SDK_NAME;
+        return sdkName ? `StellaNowSdkTS_${hash}_${sdkName}` : `StellaNowSdkTS_${hash}`;
     }
 
     private setupEventHandlers(): void {
@@ -106,24 +137,35 @@ class StellaNowMqttSink implements IStellaNowSink {
 
         this.mqttClient.on('connect', () => {
             this.logger.info('Connected to MQTT broker');
+            this.connectionState.tryTransition(ConnectionState.CONNECTED);
+            this.isConnecting = false;
             this.OnConnected.trigger();
         });
 
         this.mqttClient.on('disconnect', (packet?: Packet) => {
             this.logger.info(`Disconnected from MQTT broker: ${packet ? JSON.stringify(packet) : 'No packet'}`);
+            this.connectionState.forceState(ConnectionState.DISCONNECTED);
+            this.isConnecting = false;
             this.OnDisconnected.trigger();
         });
 
         this.mqttClient.on('error', (err) => {
             this.handleError(`MQTT error: ${err.message}`);
+            if (this.connectionState.isConnecting) {
+                this.connectionState.forceState(ConnectionState.DISCONNECTED);
+                this.isConnecting = false;
+            }
         });
 
         this.mqttClient.on('close', () => {
             this.logger.info('MQTT connection closed');
+            this.connectionState.forceState(ConnectionState.DISCONNECTED);
+            this.isConnecting = false;
         });
 
         this.mqttClient.on('offline', () => {
             this.logger.info('MQTT client went offline');
+            this.connectionState.forceState(ConnectionState.DISCONNECTED);
         });
 
         this.mqttClient.on('reconnect', () => {
@@ -142,11 +184,13 @@ class StellaNowMqttSink implements IStellaNowSink {
         try {
             if (!this.mqttClient) {
                 this.mqttClient = mqtt.connect(this.envConfig.brokerUrl, {
+                    clientId: this.clientId,
                     username: '',   // Will be populated in the auth strategy
                     password: '',   // Will be populated in the auth strategy
                     clean: true,
                     protocolVersion: 5,
                     manualConnect: true,
+                    reconnectPeriod: 0, // Disable auto-reconnect, we handle reconnection manually
                 });
                 this.setupEventHandlers();
             }
@@ -178,10 +222,6 @@ class StellaNowMqttSink implements IStellaNowSink {
             this.logger.error('Failed to publish message: Event cannot be null');
             throw new SinkOperationError('Event cannot be null');
         }
-        if (!this.IsConnected) {
-            this.logger.error('Failed to publish message: Sink is not connected');
-            throw new MqttConnectionException('Cannot publish message: Sink is not connected', this.envConfig.brokerUrl);
-        }
 
         try {
             this.logger.debug(`Publishing message with ID: ${event.value.metadata.messageId}`);
@@ -196,34 +236,45 @@ class StellaNowMqttSink implements IStellaNowSink {
     /**
      * Cleans up resources used by the sink.
      * @remarks This method should be called manually if the sink is no longer needed to free up resources.
+     * @returns A promise that resolves when disposal is complete.
      */
-    public dispose(): void {
+    public async dispose(): Promise<void> {
         this.logger.debug('Disposing StellaNowMqttSink');
-        void this.mqttClient?.end(true, {}, () => {});
-        void this.mutex.acquire().then((release) => {
-            try {
-                if (this.cancellationToken) {
-                    this.cancellationToken.cancel();
-                }
+        const release = await this.mutex.acquire();
 
-                if (this.connectionMonitorTask) {
-                    this.connectionMonitorTask.catch(() => {}); // Handle rejection silently
-                }
-
-                if (this.mqttClient) {
-                    this.mqttClient.removeAllListeners();
-                    this.mqttClient.end();
-                    this.mqttClient = null;
-                }
-
-                this.connectionMonitorTask = undefined;
-                this.cancellationToken = undefined;
-            } catch (err) {
-                this.logger.error(`Failed to dispose MQTT sink: ${String(err)}`);
-            } finally {
-                release(); // Call the release function returned by acquire
+        try {
+            if (this.cancellationToken) {
+                this.cancellationToken.cancel();
             }
-        });
+
+            if (this.connectionMonitorTask) {
+                try {
+                    await this.connectionMonitorTask;
+                } catch (err) {
+                    this.logger.debug(`Connection monitor task ended with error (expected): ${String(err)}`);
+                }
+            }
+
+            if (this.mqttClient) {
+                await new Promise<void>((resolve) => {
+                    this.mqttClient!.end(true, {}, () => resolve());
+                });
+                this.mqttClient.removeAllListeners();
+                this.mqttClient = null;
+            }
+
+            this.connectionMonitorTask = undefined;
+            this.cancellationToken = undefined;
+            this.connectionState.reset();
+            this.isConnecting = false;
+
+            this.logger.debug('StellaNowMqttSink disposed successfully');
+        } catch (err) {
+            this.logger.error(`Failed to dispose MQTT sink: ${String(err)}`);
+            throw new SinkOperationError('Failed to dispose sink', err);
+        } finally {
+            release();
+        }
     }
 
     private async disconnectAsync(): Promise<void> {
@@ -255,7 +306,10 @@ class StellaNowMqttSink implements IStellaNowSink {
                 return;
             }
 
-            this.OnMessageAck.trigger(event.value.metadata.messageId);
+            if (!this.connectionState.isConnected || !this.mqttClient.connected) {
+                reject(new MqttConnectionException('Cannot publish message: Sink is not connected', this.envConfig.brokerUrl));
+                return;
+            }
 
             if(this.performanceMonitor) {
                 this.performanceMonitor.recordEvent();
@@ -265,13 +319,11 @@ class StellaNowMqttSink implements IStellaNowSink {
                 this.getTopic(),
                 JSON.stringify(event),
                 { qos: 1 },
-                (error, packet?: Packet) => {
+                (error) => {
                     if (error) {
                         reject(new MqttConnectionException(error.message, this.envConfig.brokerUrl));
                     } else {
-                        if (packet && packet.cmd === 'publish' && packet.messageId) {
-                            this.OnMessageAck.trigger(event.value.metadata.messageId);
-                        }
+                        this.OnMessageAck.trigger(event.value.metadata.messageId);
                         resolve();
                     }
                 }
@@ -291,6 +343,11 @@ class StellaNowMqttSink implements IStellaNowSink {
                 return;
             }
 
+            if (!this.connectionState.tryTransition(ConnectionState.CONNECTING)) {
+                reject(new MqttConnectionException('Invalid state transition to CONNECTING'));
+                return;
+            }
+
             const onConnect = (): void => {
                 client.off('connect', onConnect);
                 client.off('error', onError);
@@ -300,6 +357,7 @@ class StellaNowMqttSink implements IStellaNowSink {
             const onError = (err: Error): void => {
                 client.off('connect', onConnect);
                 client.off('error', onError);
+                this.connectionState.forceState(ConnectionState.DISCONNECTED);
                 reject(new MqttConnectionException(err.message));
             };
 
@@ -312,39 +370,64 @@ class StellaNowMqttSink implements IStellaNowSink {
     private async startConnectionMonitor(cancellationToken: { isCancelled: boolean }): Promise<void> {
         this.logger.info('Started connection monitor');
         let attempt = 0;
+        let consecutiveFailures = 0;
 
         try {
             while (!cancellationToken.isCancelled) {
-                if (!this.IsConnected && this.mqttClient) {
+                if (!this.IsConnected && this.mqttClient && !this.isConnecting) {
+                    if (this.maxReconnectAttempts !== null && consecutiveFailures >= this.maxReconnectAttempts) {
+                        this.logger.error(`Maximum reconnection attempts (${this.maxReconnectAttempts}) reached. Stopping connection monitor.`);
+                        this.OnError.trigger(`Failed to connect after ${this.maxReconnectAttempts} attempts`);
+                        break;
+                    }
+
+                    this.isConnecting = true;
                     attempt++;
+                    consecutiveFailures++;
+
                     try {
-                        this.logger.info(`Attempting connection (Attempt ${attempt})`);
-                        await this.authStrategy.auth(this.mqttClient);
+                        const attemptInfo = this.maxReconnectAttempts === null
+                            ? `Attempt ${attempt}`
+                            : `Attempt ${attempt}/${this.maxReconnectAttempts}`;
+                        this.logger.info(`Attempting connection (${attemptInfo})`);
+                        await this.authStrategy.auth(this.mqttClient, this.clientId);
                         await this.mqttConnect();
                         attempt = 0; // Reset on success
+                        consecutiveFailures = 0; // Reset consecutive failures counter
+                        this.isConnecting = false;
                     } catch (err) {
                         this.logger.error(`Connection attempt ${attempt} failed: ${String(err)}`);
+                        this.isConnecting = false;
+                        this.connectionState.forceState(ConnectionState.DISCONNECTED);
                     }
                 }
 
                 // Only log retry and delay if a connection attempt is needed
-                if (!this.IsConnected && this.mqttClient) {
+                if (!this.IsConnected && this.mqttClient && !this.isConnecting) {
+                    if (this.maxReconnectAttempts !== null && consecutiveFailures >= this.maxReconnectAttempts) {
+                        break;
+                    }
+
                     const delayMs = Math.min(
-                        StellaNowMqttSink.BaseReconnectDelayMs * 2 ** (attempt - 1),
+                        StellaNowMqttSink.BaseReconnectDelayMs * 2 ** (consecutiveFailures - 1),
                         StellaNowMqttSink.MaxReconnectDelayMs
                     );
-                    this.logger.info(`Retrying connection in ${delayMs / 1000} seconds...`);
+                    const attemptsInfo = this.maxReconnectAttempts === null
+                        ? `${consecutiveFailures} attempts`
+                        : `${consecutiveFailures}/${this.maxReconnectAttempts} attempts`;
+                    this.logger.info(`Retrying connection in ${delayMs / 1000} seconds... (${attemptsInfo})`);
                     await new Promise((resolve) => setTimeout(resolve, delayMs));
                 } else {
-                    // If connected, wait a shorter interval before checking again
                     await new Promise((resolve) => setTimeout(resolve, 2500));
                 }
             }
         } catch (err) {
             this.logger.error(`Unexpected error in connection monitor: ${String(err)}`);
+            this.isConnecting = false;
             throw new SinkOperationError('Unexpected error in connection monitor', err);
         } finally {
             this.logger.info('Connection monitor cancelled');
+            this.isConnecting = false;
         }
     }
 

@@ -31,6 +31,7 @@ interface IMqttAuthStrategy {
     /**
      * Reconnects the existing MQTT client if it is disconnected.
      * @param mqttClient - The MQTT client instance to reconnect.
+     * @param clientId - The persistent client ID to use for the connection.
      * @returns A promise that resolves when the client is successfully reconnected.
      * @throws {OidcAuthenticationError} If reconnection fails due to authentication issues,
      * such as invalid tokens, missing credentials, or authentication service errors.
@@ -40,9 +41,9 @@ interface IMqttAuthStrategy {
      * such as an expired or malformed token.
      * @example
      * const authStrategy = new OidcMqttAuthStrategy(logger, envConfig, projectInfo, credentials);
-     * await authStrategy.auth(mqttClient);
+     * await authStrategy.auth(mqttClient, 'StellaNowSdkTS_abc123_prod');
      */
-    auth(mqttClient: MqttClient): Promise<void>;
+    auth(mqttClient: MqttClient, clientId: string): Promise<void>;
 }
 
 export { IMqttAuthStrategy };

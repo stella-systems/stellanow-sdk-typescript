@@ -256,3 +256,26 @@ export class SdkCreationError extends StellaNowError {
 
     public readonly cause?: unknown;
 }
+
+/**
+ * Error thrown when attempting to enqueue a message to a full queue
+ * with RAISE_EXCEPTION overflow strategy.
+ * @remarks Allows applications to implement custom handling for queue overflow scenarios.
+ */
+export class QueueFullError extends StellaNowError {
+    /**
+     * Creates a new instance of QueueFullError.
+     * @param queueSize - The maximum size of the queue.
+     * @param currentSize - The current number of messages in the queue.
+     */
+    constructor(
+        public readonly queueSize: number,
+        public readonly currentSize: number
+    ) {
+        super(
+            `Queue is full: ${currentSize}/${queueSize} messages. Cannot enqueue new message.`,
+            'QUEUE_FULL'
+        );
+        this.name = 'QueueFullError';
+    }
+}

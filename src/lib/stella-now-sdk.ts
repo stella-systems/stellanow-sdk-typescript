@@ -22,7 +22,7 @@ import { CancellationToken } from './core/cancellation-token.ts';
 import { StellaNowEventWrapper } from './core/events.ts';
 import { SdkCreationError } from './core/exceptions.ts';
 import type { IStellaNowMessageSource} from './core/message-source.ts';
-import { FifoQueue } from './core/message-source.ts';
+import { FifoQueue, QueueOverflowStrategy } from './core/message-source.ts';
 import type { StellaNowMessageBase } from './core/messages.ts';
 import { StellaNowMessageWrapper } from './core/messages.ts';
 import type { StellaNowSignal } from './core/stellanow-signal.ts';
@@ -75,6 +75,7 @@ class StellaNowSDK {
     private cancellationToken: CancellationToken;
     private readonly batchSize: number = 100; // Process up to 100 messages per cycle
     private readonly loopDelayMs: number = 50; // Delay between cycles
+    private wasDisconnectedLogged: boolean = false;
 
     /**
      * Initializes a new instance of the StellaNowSDK.
@@ -95,6 +96,24 @@ class StellaNowSDK {
 
         sink.OnMessageAck.subscribe((eventId) => source.markMessageAck(eventId));
 
+        sink.OnConnected.subscribe(() => {
+            if (this.wasDisconnectedLogged) {
+                this.logger.warn('Connection restored, resuming message publishing');
+                this.wasDisconnectedLogged = false;
+            }
+        });
+
+        // Check if using FifoQueue with UNLIMITED strategy and log warning
+        if (source instanceof FifoQueue) {
+            if (source.getOverflowStrategy() === QueueOverflowStrategy.UNLIMITED) {
+                this.logger.warn(
+                    'WARNING: Message queue is using UNLIMITED overflow strategy. ' +
+                    'This allows unbounded queue growth which may lead to high memory consumption. ' +
+                    'Please monitor system resources carefully.'
+                );
+            }
+        }
+
         this.cancellationToken = new CancellationToken();
     }
 
@@ -108,7 +127,6 @@ class StellaNowSDK {
             await this.sink.start();
             this.logger.info('StellaNowSDK started successfully');
 
-            // Start the persistent event loop
             this.eventLoopTask = this.runEventLoop();
         } catch (err) {
             this.logger.error(`Failed to start StellaNowSDK: ${String(err)}`);
@@ -198,7 +216,10 @@ class StellaNowSDK {
      */
     private async eventLoop(): Promise<void> {
         if (!this.sink.IsConnected) {
-            this.logger.warn('Unable to publish: Sink is not connected');
+            if (!this.wasDisconnectedLogged) {
+                this.logger.warn('Unable to publish: Sink is not connected. Messages will be queued until connection is restored.');
+                this.wasDisconnectedLogged = true;
+            }
             return;
         }
 
@@ -208,13 +229,24 @@ class StellaNowSDK {
         }
 
         const batch: StellaNowEventWrapper[] = [];
-        while (!this.source.isEmpty() && batch.length < this.batchSize) {
+        let dequeueCount = 0;
+
+        while (!this.source.isEmpty() && dequeueCount < this.batchSize) {
+            if (!this.sink.IsConnected) {
+                this.logger.warn('Connection lost during message dequeue');
+                break;
+            }
+
             const event = this.source.tryDequeue();
-            if (event) batch.push(event);
+            if (event) {
+                batch.push(event);
+                dequeueCount++;
+            }
         }
 
         if (batch.length > 0) {
             this.logger.debug(`Publishing ${batch.length} queued messages`);
+
             await Promise.all(
                 batch.map(event =>
                     this.sink.sendMessageAsync(event)

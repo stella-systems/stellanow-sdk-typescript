@@ -19,7 +19,6 @@
 // IN THE SOFTWARE.
 
 import type { MqttClient, IClientOptions } from 'mqtt';
-import { nanoid } from 'nanoid';
 import type {
     Configuration as DiscoveryConfig,
     TokenEndpointResponse,
@@ -93,10 +92,12 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
 
     /**
      * Reconnects the existing MQTT client if it is disconnected.
+     * @param mqttClient - The MQTT client instance to reconnect.
+     * @param clientId - The persistent client ID to use for the connection.
      * @returns A promise that resolves when the client is reconnected.
      * @throws {OidcAuthenticationError} If authentication or reconnection fails.
      */
-    public async auth(mqttClient: ExtendedMqttClient): Promise<void> {
+    public async auth(mqttClient: ExtendedMqttClient, clientId: string): Promise<void> {
         if (!mqttClient) {
             throw new OidcAuthenticationError('No MQTT client available to reconnect');
         }
@@ -111,9 +112,7 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
             throw new OidcAuthenticationError('No valid access token available for reconnection');
         }
 
-        const clientId: string = this.credentials.sinkClientId ? this.credentials.sinkClientId : `StellaNowSdkTS-${nanoid(10)}`;
-
-        this.logger.info(`MQTT clientId: ${clientId}`);
+        this.logger.info(`MQTT authenticating with clientId: ${clientId}`);
 
         // Update options and reconnect
         mqttClient.options.username = accessToken; // Safe access with ExtendedMqttClient
@@ -206,7 +205,6 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
     /**
      * Attempts to refresh the existing access token.
      * @returns {Promise<boolean>} True if the refresh was successful, false otherwise.
-     * @throws {OidcAuthenticationError} If an unexpected error occurs during refresh.
      */
     private async refreshTokensAsync(): Promise<boolean> {
         this.logger.info('Attempting token refresh');
@@ -233,7 +231,7 @@ class OidcMqttAuthStrategy implements IMqttAuthStrategy {
             return true;
         } catch (err: unknown) {
             this.logger.error(`Token refresh error: ${getErrorMessage(err)}`);
-            throw new OidcAuthenticationError('Token refresh failed', err);
+            return false; // Return false to allow fallback to loginAsync
         }
     }
 

@@ -61,6 +61,34 @@ Set the following environment variables before initializing the SDK:
 - `ORGANIZATION_ID`: The unique identifier for your organization.
 - `PROJECT_ID`: The unique identifier for your project.
 
+#### Optional Environment Variables
+
+The SDK also supports optional environment variables for advanced configuration:
+
+- **`SDK_NAME`**: Customizes the MQTT Client ID for easier identification and debugging.
+  - **Format**: When set, the MQTT Client ID becomes `StellaNowSdkTS_{hash}_{SDK_NAME}`
+  - **Default**: If not set, the Client ID is `StellaNowSdkTS_{hash}`
+  - **Use Cases**:
+    - Environment identification (e.g., `SDK_NAME=production`, `SDK_NAME=staging`)
+    - Service identification in microservices (e.g., `SDK_NAME=payment-service`)
+    - Version tracking (e.g., `SDK_NAME=api-v2`)
+    - Testing and debugging (e.g., `SDK_NAME=test-run-123`)
+  - **Example**: `SDK_NAME=production-api node app.js`
+  - **Result**: MQTT Client ID will be `StellaNowSdkTS_mhdlls6d8k_production-api`
+
+- **`RECONNECT_LIMIT`**: Sets the maximum number of reconnection attempts when connection is lost.
+  - **Format**: Positive integer (e.g., `5`, `10`, `100`)
+  - **Default**: Unlimited retries if not set
+  - **Behavior**:
+    - If set to a number (e.g., `RECONNECT_LIMIT=5`), the SDK will attempt to reconnect up to 5 times
+    - If not set or set to `0` or negative value, the SDK will retry indefinitely with exponential backoff
+    - After reaching the limit, the SDK stops reconnection attempts and logs an error
+  - **Example**: `RECONNECT_LIMIT=10 node app.js`
+  - **Use Cases**:
+    - Preventing infinite retry loops in production environments
+    - Failing fast in CI/CD pipelines and testing
+    - Graceful degradation in microservices architectures
+
 Then, initialize the SDK with the appropriate configuration. 
 
 ```typescript
@@ -311,6 +339,102 @@ export class DefaultLogger implements ILogger {
 ## Customization
 
 StellaNowSDK offers flexibility to adapt to specific needs.
+
+### Configuring Queue Overflow Behavior
+
+The SDK implements configurable queue overflow strategies to handle network instability and varying data criticality requirements. By default, it uses the `UNLIMITED` strategy, which allows the queue to grow without any size restrictions (the default `maxSize` parameter is ignored when using this strategy).
+
+#### Available Overflow Strategies
+
+The SDK provides four distinct approaches:
+
+1. **`UNLIMITED`** (default): Allows unlimited queue growth without any size restrictions. The `maxSize` parameter is ignored when using this strategy. The queue will continue to accept all messages regardless of memory consumption. **Warning**: This strategy can lead to unbounded memory usage. Monitor system resources carefully when using this option. The SDK will log a warning message at startup when using this strategy.
+
+2. **`DROP_OLDEST`**: Removes the earliest messages when capacity is exceeded. Suitable for real-time data where recent information matters most.
+
+3. **`DROP_NEWEST`**: Rejects incoming messages when the queue reaches maximum size. Better for preserving historical data integrity.
+
+4. **`RAISE_EXCEPTION`**: Throws a `QueueFullError` when full, allowing applications to implement custom handling logic. Recommended for critical data requiring explicit decision-making.
+
+#### Configuration Examples
+
+For default unlimited queue (no message loss, but requires memory monitoring):
+
+```typescript
+import { FifoQueue } from 'stellanow-sdk';
+
+// Default: unlimited queue growth
+const queue = new FifoQueue();
+
+const sdk = new StellaNowSDK(projectInfo, mqttSink, queue, logger);
+// SDK will log a warning at startup about unlimited queue growth
+```
+
+For scenarios with memory constraints using DROP_OLDEST strategy:
+
+```typescript
+import { FifoQueue, QueueOverflowStrategy } from 'stellanow-sdk';
+
+const queue = new FifoQueue(
+  50_000, // maxSize: 50,000 messages
+  QueueOverflowStrategy.DROP_OLDEST
+);
+
+const sdk = new StellaNowSDK(projectInfo, mqttSink, queue, logger);
+```
+
+For preserving historical data integrity using DROP_NEWEST strategy:
+
+```typescript
+import { FifoQueue, QueueOverflowStrategy } from 'stellanow-sdk';
+
+const queue = new FifoQueue(
+  50_000, // maxSize: 50,000 messages
+  QueueOverflowStrategy.DROP_NEWEST
+);
+
+const sdk = new StellaNowSDK(projectInfo, mqttSink, queue, logger);
+// New messages will be rejected when queue is full, preserving older messages
+```
+
+For critical applications requiring exception-based handling:
+
+```typescript
+import { FifoQueue, QueueOverflowStrategy, QueueFullError } from 'stellanow-sdk';
+
+const queue = new FifoQueue(
+  200_000,
+  QueueOverflowStrategy.RAISE_EXCEPTION
+);
+
+const sdk = new StellaNowSDK(projectInfo, mqttSink, queue, logger);
+
+try {
+  sdk.sendMessage(criticalMessage);
+} catch (error) {
+  if (error instanceof QueueFullError) {
+    // Implement backup strategy
+    await writeToBackupFile(criticalMessage);
+    logger.error(`Queue full: ${error.currentSize}/${error.queueSize}`);
+  }
+}
+```
+
+#### Memory Considerations
+
+Metadata-only messages consume approximately 3-5 KB each. For reference, a queue with 100,000 messages would use roughly 300-500 MB of memory.
+
+When using the **`UNLIMITED`** strategy (default):
+- The queue will grow indefinitely without any size limit and can consume all available system memory
+- The `maxSize` parameter is ignored - there is no upper bound on queue size
+- Monitor memory usage actively, especially during extended network outages
+- Consider implementing external monitoring and alerting for memory consumption
+- Suitable for applications where no message loss is acceptable and sufficient memory is available
+
+When using size-limited strategies (`DROP_OLDEST`, `DROP_NEWEST`, `RAISE_EXCEPTION`), adjust queue size based on:
+- System available memory
+- Expected message throughput
+- Maximum tolerable downtime for MQTT connection
 
 ### Customizing the Message Queue Strategy
 
