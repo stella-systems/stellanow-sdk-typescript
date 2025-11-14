@@ -27,7 +27,8 @@ export const OIDC_CREDENTIALS_ENV_VARS = {
 };
 
 export const SINK_ENV_VARS = {
-    'SINK_CLIENT_ID': 'SINK_CLIENT_ID'
+    'SINK_CLIENT_ID': 'SINK_CLIENT_ID',
+    'RECONNECT_LIMIT': 'RECONNECT_LIMIT'
 };
 
 export const PROJECT_INFO_ENV_VARS = {

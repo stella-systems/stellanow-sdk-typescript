@@ -93,11 +93,12 @@ interface IStellaNowSink {
      * and stopping the connection monitor.
      * @remarks This method should be called manually when the sink is no longer needed
      * to free up resources and prevent memory leaks.
+     * @returns A promise that resolves when disposal is complete.
      * @throws {SinkOperationError} If an error occurs during resource cleanup (e.g., failed disconnection).
      * @example
-     * sink.dispose();
+     * await sink.dispose();
      */
-    dispose(): void;
+    dispose(): Promise<void>;
 }
 
 export { IStellaNowSink };
